@@ -156,7 +156,7 @@ export default function Home() {
           >
             <iframe
               className="w-full h-full"
-              src="https://www.youtube.com/embed/XHOmBV4js_E?start=5"
+              src="https://www.youtube.com/watch?v=wBp4X27_UTA"
               title="Video Penjelasan Program Kacamata Gratis"
               allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
