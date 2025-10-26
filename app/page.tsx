@@ -70,12 +70,16 @@ export default function Home() {
         <div
           className="h-full bg-linear-to-r from-green-500 to-blue-600 transition-all duration-300"
           style={{
-            width: `${Math.min(
-              (scrollY /
-                (document.documentElement.scrollHeight - window.innerHeight)) *
-                100,
-              100
-            )}%`,
+            width:
+              typeof window !== "undefined"
+                ? `${Math.min(
+                    (scrollY /
+                      (document.documentElement.scrollHeight -
+                        window.innerHeight)) *
+                      100,
+                    100
+                  )}%`
+                : "0%",
           }}
         />
       </div>
