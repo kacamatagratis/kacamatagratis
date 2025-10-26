@@ -10,8 +10,11 @@ import {
   ChevronDown,
   Clock,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
+import RegistrationForm from "@/components/RegistrationForm";
+
+export const dynamic = "force-dynamic";
 
 export default function Home() {
   const [isVisible, setIsVisible] = useState(false);
@@ -871,30 +874,34 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-16 sm:py-24 bg-linear-to-br from-blue-600 to-indigo-700 text-white">
+      {/* Registration Form Section */}
+      <section className="py-16 sm:py-24 bg-linear-to-br from-blue-600 to-indigo-700">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
-              Gerakan Donasi 1 Juta Kacamata Medis Gratis untuk Indonesia
-            </h2>
-            <p className="text-lg sm:text-xl text-blue-100 mb-8 leading-relaxed">
-              Dengan menjadi bagian dari SocialPreneur Movement Indonesia, kamu
-              ikut berperan langsung dalam gerakan sosial nasional yang membantu
-              sesama sekaligus membuka peluang ekonomi berkelanjutan.
-            </p>
-            <p className="text-base sm:text-lg text-blue-50 mb-10 font-medium italic">
-              Karena kebaikan bisa tumbuh jadi keberkahan — ketika sosial dan
-              bisnis berjalan seimbang.
-            </p>
-            <a
-              id="zoom"
-              href="#"
-              className="inline-flex items-center gap-2 bg-white text-blue-600 hover:bg-gray-100 px-6 sm:px-10 py-4 rounded-full font-bold text-base sm:text-lg transition-all duration-500 hover:shadow-2xl hover:scale-105 hover:-translate-y-1 group min-h-12 sm:min-h-14"
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center mb-8 text-white">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
+                Gerakan Donasi 1 Juta Kacamata Medis Gratis untuk Indonesia
+              </h2>
+              <p className="text-lg sm:text-xl text-blue-100 mb-4 leading-relaxed">
+                Dengan menjadi bagian dari SocialPreneur Movement Indonesia,
+                kamu ikut berperan langsung dalam gerakan sosial nasional yang
+                membantu sesama sekaligus membuka peluang ekonomi berkelanjutan.
+              </p>
+              <p className="text-base sm:text-lg text-blue-50 mb-8 font-medium italic">
+                Karena kebaikan bisa tumbuh jadi keberkahan — ketika sosial dan
+                bisnis berjalan seimbang.
+              </p>
+            </div>
+
+            <Suspense
+              fallback={
+                <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                  Loading...
+                </div>
+              }
             >
-              Daftar Sekarang untuk ikuti ZOOM Penjelasan Program
-              <ArrowRight className="w-5 h-5 transition-transform duration-500 group-hover:translate-x-1" />
-            </a>
+              <RegistrationForm />
+            </Suspense>
           </div>
         </div>
       </section>

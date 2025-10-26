@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // DEVELOPMENT MODE - Allow all read/write access
+    // TODO: Restrict this in production with proper authentication
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+
+/* PRODUCTION RULES - Use these when going live:
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Admin credentials - allow read for login verification
+    match /adminsetting/credential {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Other admin settings
+    match /adminsetting/{document} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Participants
+    match /participants/{participantId} {
+      allow create: if true;
+      allow read: if true;
+      allow update: if true;
+      allow delete: if false;
+    }
+    
+    // Events
+    match /events/{eventId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+    
+    // Notifications log
+    match /notifications_log/{logId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if false;
+    }
+    
+    // Broadcast numbers
+    match /broadcast_numbers/{numberId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if true;
+    }
+  }
+}
+*/

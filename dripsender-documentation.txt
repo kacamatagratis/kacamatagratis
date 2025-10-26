@@ -1,0 +1,29 @@
+Kirim Pesan
+POST https://api.dripsender.id/send
+Body :
+api_key
+text
+phone
+
+Kirim Pesan + File
+POST https://api.dripsender.id/send
+Body :
+api_key
+text
+phone
+media_url
+
+Webhook List
+POST Ganti dengan url webhook
+name : Nama kontak
+phone : 081xxx
+
+Get List
+GET https://api.dripsender.id/lists/
+Headers
+api-key : Ganti dengan apikey kamu
+
+Get Contact
+GET https://api.dripsender.id/lists/:id (rubah :id dengan id list)
+Headers
+api-key : Ganti dengan apikey kamu

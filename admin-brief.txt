@@ -1,0 +1,343 @@
+Spesifikasi Lengkap Sistem Notifikasi & Referral Landing Page Socialpreneur
+🎯 Tujuan Utama Sistem
+
+Membangun sistem Landing Page + Referral + Notifikasi Otomatis via WhatsApp yang:
+
+Mengajak calon peserta bergabung dalam program Socialpreneur melalui landing page.
+
+Memfasilitasi pendaftaran peserta ke event Zoom secara otomatis.
+
+Membangun sistem referral, di mana setiap peserta baru mendapat link unik untuk mengundang orang lain.
+
+Mengirimkan notifikasi otomatis ke peserta dan pengundang.
+
+Memberikan admin kemampuan melakukan broadcast, reminder, dan komunikasi lanjutan secara aman.
+
+🧭 1. Alur Umum Sistem
+1.1. Landing Page Referral
+
+Domain utama: www.webdonasi.com
+
+Setiap pengundang memiliki referral URL unik:
+
+www.webdonasi.com/ref=<noWA_pengundang>
+
+
+Contoh: www.webdonasi.com/ref=081562726272
+
+Landing page berisi penjelasan program Socialpreneur dan CTA untuk mengikuti penjelasan via Zoom.
+
+1.2. Formulir Pendaftaran
+
+Form diisi oleh calon peserta:
+
+Sapaan     :
+Nama       :
+Kota       :
+Profesi    :
+No WA Aktif:
+
+1.3. Setelah Form Dikirim
+
+Data peserta disimpan otomatis ke database.
+
+Peserta langsung diarahkan ke nomor WA admin (via wa.me/<adminNumber>).
+
+Sistem membuat link referral unik untuk peserta baru:
+
+www.webdonasi.com/ref=<noWAPeserta>
+
+
+Sistem mengirim:
+
+Notifikasi selamat datang ke peserta.
+
+Notifikasi ke pengundang (yang link-nya digunakan).
+
+Peserta dapat langsung membagikan link referral-nya ke orang lain agar mereka juga bisa ikut mendaftar — menjadi bagian dari sistem yang terus berkembang.
+
+🧩 2. Struktur Database Utama
+Tabel: participants
+Field	Type	Deskripsi
+id	UUID	Primary Key
+sapaan	varchar	Bapak/Ibu
+name	varchar	Nama peserta
+city	varchar	Kota
+profession	varchar	Profesi
+phone	varchar (UNIQUE)	Nomor WA (E.164 format)
+referral_code	varchar	Default: noWA peserta
+referrer_phone	varchar	Nomor WA pengundang
+referrer_sequence	int	Urutan pendaftar via pengundang tsb
+registered_at	timestamptz	Tanggal daftar
+status	varchar	‘belum_join’ / ‘sudah_join’
+unsubscribed	boolean	Default false
+Tabel: events
+Field	Type	Deskripsi
+id	UUID	Primary Key
+title	varchar	Nama event Zoom
+start_time	timestamptz	Waktu mulai
+zoom_link	varchar	Link Zoom event
+meta	jsonb	Info tambahan
+Tabel: notifications_log
+
+Log pengiriman pesan.
+
+Field	Type	Deskripsi
+id	UUID	Primary Key
+participant_id	UUID	FK peserta
+target_phone	varchar	Nomor tujuan
+type	varchar	welcome / reminder / referrer_alert / broadcast
+provider	varchar	API provider (DripSender, dsb.)
+status	varchar	queued / sent / failed
+created_at	timestamptz	Tanggal kirim
+Tabel: broadcast_numbers
+
+Nomor-nomor WA API aktif (untuk randomisasi pengiriman).
+
+Field	Type	Deskripsi
+phone	varchar	Nomor WA API
+provider	varchar	ex: DripSender
+priority	int	Urutan prioritas
+is_active	boolean	Default true
+🔄 3. Alur Proses Teknis
+Step 1. Pengunjung Membuka Link Referral
+
+URL contoh: www.webdonasi.com/ref=081562726272
+
+Sistem membaca ref dan menyimpannya sementara.
+
+Saat form disubmit, data referrer_phone ikut tersimpan.
+
+Step 2. Peserta Baru Daftar
+
+Sistem memvalidasi nomor WA.
+
+Menyimpan data peserta baru ke DB.
+
+Menghitung urutan (referrer_sequence) = peserta ke-berapa via pengundang.
+
+Membuat referral link pribadi peserta.
+
+Step 3. Redirect ke WhatsApp Admin
+
+Setelah daftar sukses → diarahkan ke:
+
+https://wa.me/<admin_number>?text=Halo%20Admin,%20saya%20sudah%20daftar...
+
+Step 4. Pengiriman Notifikasi Otomatis
+
+Sistem mengirim tiga jenis pesan secara paralel:
+
+a) Ke Peserta Baru
+
+Pesan selamat datang, video pengantar, dan link referral pribadi.
+
+b) Ke Pengundang
+
+Pesan berisi informasi:
+
+Nama peserta
+
+Kota
+
+Profesi
+
+No WA peserta
+
+Urutan ke-berapa
+
+Total peserta yang sudah mereka undang
+
+c) Ke Database
+
+Semua aktivitas dicatat di notifications_log.
+
+Step 5. Reminder Otomatis (1 Jam Sebelum Event)
+
+Sistem mendeteksi event yang akan dimulai dalam 1 jam.
+
+Mengirim pesan otomatis berisi:
+
+Nama event
+
+Waktu mulai
+
+Link Zoom
+
+Ajakan hadir
+
+Step 6. Follow-up dan Event Berikutnya
+
+Setelah event selesai, sistem dapat mengirim pesan:
+
+“Terima kasih sudah hadir! Event berikutnya: <judul> – <tanggal>. Bagikan lagi link referral Anda ya!”
+
+💬 4. Contoh Template Pesan WhatsApp
+(1) Peserta – Welcome
+Halo {sapaan} {name}! 👋
+Terima kasih sudah mendaftar Sosialisasi Program Socialpreneur.
+
+📌 Jadwal: {event_title} – {event_date_time}
+🎥 Video pengantar: {link_video}
+🔗 Link referral Anda: www.webdonasi.com/ref={referral_code}
+
+Bagikan link ini ke teman Anda agar mereka juga bisa ikut sosialisasi!
+
+(2) Pengundang – Notifikasi Pendaftar Baru
+Halo! 🎉
+Ada peserta baru yang mendaftar lewat link Anda.
+
+Nama      : {name}
+Kota      : {city}
+Profesi   : {profession}
+No WA     : {phone}
+Urutan    : Peserta ke-{referrer_sequence}
+Total yg sudah Anda undang: {referrer_total}
+
+Lihat di dashboard untuk detail selengkapnya.
+
+(3) Reminder 1 Jam Sebelum Zoom
+Hai {name}, pengingat ya 👋
+Sosialisasi {event_title} akan dimulai 1 jam lagi.
+
+🔗 Link Zoom: {zoom_link}
+Pastikan koneksi lancar ya. Sampai jumpa!
+
+(4) Broadcast Informasi Tambahan (untuk semua peserta)
+Halo {name}, kami punya kabar baik!
+Besok ada sesi lanjutan Socialpreneur tentang {topic}.
+Cek info selengkapnya di {link_page}
+
+🚀 5. Sistem WhatsApp API – DripSender (Multi API)
+Tujuan:
+
+Mengirim pesan otomatis via WA dengan aman, cepat, dan tidak diblokir.
+
+Mekanisme:
+
+Sistem terhubung ke DripSender API (bisa multi akun).
+
+Pesan dikirim secara random atau bergiliran (round-robin) melalui beberapa nomor WA API aktif.
+
+Jika salah satu nomor terblokir:
+
+is_active = false
+
+Sistem otomatis pindah ke nomor lain.
+
+Pengaturan Tambahan:
+
+Jam aktif kirim pesan: bisa diset (misal 09.00–17.00 WIB).
+
+Delay random antar pesan (2–5 detik) agar natural.
+
+Batas pengiriman per akun (misal 600 pesan/jam).
+
+🧠 6. Dashboard Admin
+Fitur utama:
+
+Data Peserta
+
+Nama, kota, profesi, WA, pengundang, urutan, status.
+
+Filter: lokasi, tanggal daftar, pengundang, status join.
+
+Action: ubah status, kirim ulang pesan, unsubscribe.
+
+Rekap Pengundang
+
+Total peserta per pengundang.
+
+Urut berdasarkan jumlah tertinggi.
+
+Broadcast Pesan
+
+Kirim pesan ke segmen tertentu (misal hanya peserta dari “Bogor”).
+
+Pilih template + waktu kirim.
+
+Gunakan beberapa nomor WA secara bergantian.
+
+Monitoring
+
+Log pengiriman (sent, failed, queued).
+
+Provider yang digunakan.
+
+Retry otomatis jika gagal.
+
+Unsubscribe Control
+
+Peserta bisa stop pesan dengan balas “STOP”.
+
+Admin bisa aktifkan ulang manual jika diminta.
+
+🔁 7. Broadcast Komunikasi Lanjutan
+
+Fitur ini menjaga komunikasi jangka panjang dengan peserta:
+
+Admin dapat kirim pesan broadcast untuk:
+
+Mengumumkan event baru.
+
+Mengirim konten edukasi/infografik.
+
+Menjaga engagement dan relasi.
+
+Pesan broadcast menggunakan sistem yang sama:
+
+Terjadwal sesuai jam aktif.
+
+Dikirim bergantian via beberapa nomor DripSender.
+
+Bisa difilter berdasarkan kota, tanggal daftar, atau status.
+
+Contoh penggunaan:
+
+“Hai {name}, minggu depan ada sharing eksklusif Socialpreneur batch baru! Yuk bantu sebar lagi link referral kamu: www.webdonasi.com/ref={referral_code}”
+
+🔐 8. Keamanan & Kepatuhan
+
+Data WA peserta terenkripsi.
+
+Seluruh komunikasi via HTTPS.
+
+Peserta wajib mencentang persetujuan “Menerima pesan WA”.
+
+Sistem mematuhi jam kirim dan kebijakan privasi WA Business.
+
+✅ 9. Hasil Akhir yang Diharapkan
+
+Setiap peserta baru:
+
+Terdaftar otomatis di database.
+
+Menerima pesan selamat datang + video + link referral unik.
+
+Dapat ikut menyebarkan program lewat link-nya sendiri.
+
+Menerima reminder 1 jam sebelum event (plus link Zoom).
+
+Setiap pengundang:
+
+Mendapat notifikasi setiap ada pendaftar baru.
+
+Tahu total peserta yang berhasil mereka undang.
+
+Bisa memantau hasilnya dari dashboard.
+
+Admin:
+
+Dapat memantau seluruh peserta & pengundang.
+
+Melakukan broadcast terjadwal & personalisasi.
+
+Menggunakan beberapa nomor DripSender untuk menghindari blokir.
+
+Sistem secara keseluruhan:
+
+Aman, otomatis, scalable.
+
+Bisa terus menjaga komunikasi jangka panjang dengan peserta.
+
+Membentuk jaringan Socialpreneur yang aktif dan terus tumbuh dari referral peserta sendiri.
