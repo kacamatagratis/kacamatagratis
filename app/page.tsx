@@ -155,10 +155,10 @@ export default function Home() {
             }`}
           >
             <iframe
-              className="w-full h-full"
-              src="https://www.youtube.com/watch?v=wBp4X27_UTA"
+              className="absolute top-0 left-0 w-full h-full"
+              src="https://www.youtube.com/embed/wBp4X27_UTA"
               title="Video Penjelasan Program Kacamata Gratis"
-              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
             />
           </div>
@@ -653,6 +653,176 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Media Coverage Section */}
+      <section className="py-16 sm:py-24 bg-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12 sm:mb-16">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+                Liputan Media & Kegiatan di Seluruh Indonesia
+              </h2>
+              <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
+                Program MGI telah tersebar di berbagai kota dan mendapat liputan
+                dari berbagai media. Berikut beberapa kegiatan yang telah
+                dilaksanakan:
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                {
+                  location: "Bangka Belitung",
+                  title:
+                    "Camat Bakam dan PT.MGI Terus Kampanyekan Gerakan Donasi",
+                  url: "https://getarbabel.com/sosbud/camat-bakam-dan-pt-mgi-terus-kampanyekan-gerakan-donasi-sejuta-frame-kacamata-medis-secara-gratis/",
+                  source: "GetarBabel.com",
+                },
+                {
+                  location: "Tuban",
+                  title: "Gelar Donasi Sejuta Frame Kacamata Medis Gratis",
+                  url: "https://tubankab.go.id/entry/mgi-gelar-donasi-sejuta-frame-kacamata-medis-secara-gratis",
+                  source: "TubanKab.go.id",
+                },
+                {
+                  location: "Jember",
+                  title:
+                    "PT. MGI Gelar Gerakan Donasi Sejuta Frame Kacamata Medis",
+                  url: "https://filesatu.co.id/pt-mgi-gelar-gerakan-donasi-sejuta-frame-kacamata-medis-gratis-di-jember/",
+                  source: "FileSatu.co.id",
+                },
+                {
+                  location: "Bali - Tabanan",
+                  title: "Donasi Sejuta Frame Kaca Mata Medis di Kantor Bupati",
+                  url: "https://liputanterkini.co.id/2024/11/12/donasi-sejuta-frame-kaca-mata-medis-oleh-pt-mgi/",
+                  source: "LiputanTerkini.co.id",
+                },
+                {
+                  location: "Bengkulu",
+                  title: "Pemkot Gandeng MGI Salurkan Donasi Kacamata Gratis",
+                  url: "https://www.teropongpublik.co.id/index.php/pemkot-bengkulu-gandeng-mgi-salurkan-donasi-kacamata-gratis-untuk-warga",
+                  source: "TeropongPublik.co.id",
+                },
+                {
+                  location: "Bone Bolango",
+                  title:
+                    "MGI Lanjutkan Gerakan Donasi Sejuta Frame Kacamata Medis",
+                  url: "https://digimedia.id/mgi-lanjutkan-gerakan-donasi-sejuta-frame-kacamata-medis-gratis-di-bone-bolango/",
+                  source: "DigiMedia.id",
+                },
+                {
+                  location: "Sleman - Yogyakarta",
+                  title:
+                    "1 Juta Kacamata Gratis untuk Tekan Angka Kebutaan Dunia",
+                  url: "https://newsmaker.tribunnews.com/2022/07/24/1-juta-kacamata-gratis-warga-sleman-terima-frame-kacamata-gratis-untuk-tekan-angka-kebutaan-dunia",
+                  source: "TribunNews.com",
+                },
+                {
+                  location: "Aceh Tengah",
+                  title: "Anggota DPRK & MGI Donasi Kacamata Gratis Untuk Anak",
+                  url: "https://gayo.tribunnews.com/2023/01/26/anggota-dprk-suryati-waas-mgi-donasi-kacamata-gratis-untuk-anak-di-aceh-tengah",
+                  source: "TribunNews Gayo",
+                },
+                {
+                  location: "Pontianak",
+                  title:
+                    "Donasi Pembagian Satu Juta Kacamata Medis Gratis Sukses",
+                  url: "https://pontianak.tribunnews.com/2018/09/26/mgi-bersyukur-donasi-pembagian-satu-juta-kacamata-medis-gratis-di-pontianak-sukses",
+                  source: "Tribun Pontianak",
+                },
+                {
+                  location: "Kabupaten Wajo",
+                  title: "MGI Kampanyekan Gerakan Donasi Sejuta Frame Kacamata",
+                  url: "https://mediabahana.com/2019/01/14/mgi-terus-kampanyekan-gerakan-donasi-sejuta-frame-kacamata-medis/",
+                  source: "MediaBahana.com",
+                },
+                {
+                  location: "Malinau - Kaltara",
+                  title: "PT. MGI Lakukan Gerakan Donasi 1 Juta Kacamata Medis",
+                  url: "https://citaparigata.id/2024/04/05/mgi-lakukan-gerakan-donasi-1-juta-kacamata-medis/",
+                  source: "CitaParigata.id",
+                },
+                {
+                  location: "Malang",
+                  title:
+                    "Donasi Frame Kacamata Medis Gratis untuk Siswa Kota & Kab",
+                  url: "https://malang-post.com/2022/07/19/donasi-frame-kacamata-medis-gratis-untuk-siswa-kota-dan-kabupaten-malang/",
+                  source: "Malang Post",
+                },
+                {
+                  location: "Tuban",
+                  title: "MGI Gelar Donasi Sejuta Frame Kacamata Medis Gratis",
+                  url: "https://infopublik.id/kategori/nusantara/833788/mgi-gelar-donasi-sejuta-frame-kacamata-medis-gratis",
+                  source: "InfoPublik.id",
+                },
+                {
+                  location: "Wajo",
+                  title:
+                    "MOM Nasional, MGI Serahkan Ratusan Donasi Kacamata Medis",
+                  url: "https://mediasinergi.co/2019/10/20/mom-nasional-di-wajo-mgi-serahkan-ratusan-donasi-kecamata-medis-secara-gratis/",
+                  source: "MediaSinergi.co",
+                },
+                {
+                  location: "Yogyakarta",
+                  title: "MGI Akan Bagikan Kacamata Gratis untuk Warga Jogja",
+                  url: "https://jogja.tribunnews.com/2022/08/28/mgi-akan-bagikan-kacamata-gratis-untuk-warga-yogyakarta-ini-syaratnya",
+                  source: "Tribun Jogja",
+                },
+                {
+                  location: "Jakarta Utara",
+                  title:
+                    "MGI Bagi Kacamata Gratis Untuk Anak & Penderita Glaukoma",
+                  url: "https://g-smart.id/mgi-bagi-kacamata-medis-gratis-untuk-anak-anak-dan-penderita-glaukoma/",
+                  source: "G-Smart.id",
+                },
+                {
+                  location: "Medan",
+                  title: "MGI Donasikan Sejuta Kacamata Medis Gratis",
+                  url: "https://www.patimpus.com/2022/11/mgi-donasikan-sejuta-kacamata-medis.html",
+                  source: "Patimpus.com",
+                },
+              ].map((news, index) => (
+                <div
+                  key={index}
+                  className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-6 hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group border border-blue-100"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
+                      {news.location}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors line-clamp-2">
+                    {news.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">{news.source}</p>
+                  <a
+                    href={news.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-sm group-hover:gap-3 transition-all"
+                  >
+                    Baca Selengkapnya
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-12 text-center">
+              <p className="text-gray-600 text-lg mb-6">
+                <strong className="text-gray-900">50+ Kota</strong> di seluruh
+                Indonesia telah merasakan manfaat program ini
+              </p>
+              <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-100 to-blue-100 px-6 py-3 rounded-full">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <span className="font-semibold text-gray-900">
+                  Program Terpercaya & Tersebar Nasional
+                </span>
+              </div>
             </div>
           </div>
         </div>
