@@ -11,6 +11,7 @@ import {
   CheckCircle,
   XCircle,
   MessageSquare,
+  RotateCcw,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
@@ -23,9 +24,10 @@ interface NotificationLog {
   target_phone: string;
   type: string;
   api_key_used: string;
-  status: "success" | "failed";
+  status: "success" | "failed" | "pending";
   message_content: string;
   error?: string;
+  metadata?: any;
   created_at: string;
 }
 
@@ -35,6 +37,7 @@ export default function NotificationsPage() {
     NotificationLog[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState<string | null>(null);
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
@@ -103,6 +106,36 @@ export default function NotificationsPage() {
     setFilteredNotifications(filtered);
   };
 
+  const handleRetry = async (notificationId: string) => {
+    if (retrying) return; // Prevent multiple retries at once
+
+    setRetrying(notificationId);
+    try {
+      const response = await fetch("/api/notifications/retry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ notificationId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert("Message resent successfully!");
+        // Reload notifications to see updated status
+        await loadNotifications();
+      } else {
+        alert(`Failed to retry: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error retrying notification:", error);
+      alert("Failed to retry message");
+    } finally {
+      setRetrying(null);
+    }
+  };
+
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       welcome: "Welcome",
@@ -127,6 +160,7 @@ export default function NotificationsPage() {
     total: filteredNotifications.length,
     success: filteredNotifications.filter((n) => n.status === "success").length,
     failed: filteredNotifications.filter((n) => n.status === "failed").length,
+    pending: filteredNotifications.filter((n) => n.status === "pending").length,
     successRate:
       filteredNotifications.length > 0
         ? (
@@ -185,9 +219,9 @@ export default function NotificationsPage() {
           <p className="text-3xl font-bold text-red-600 mt-2">{stats.failed}</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <p className="text-sm text-gray-500 font-medium">Success Rate</p>
-          <p className="text-3xl font-bold text-blue-600 mt-2">
-            {stats.successRate}%
+          <p className="text-sm text-gray-500 font-medium">Pending</p>
+          <p className="text-3xl font-bold text-yellow-600 mt-2">
+            {stats.pending}
           </p>
         </div>
       </div>
@@ -226,6 +260,7 @@ export default function NotificationsPage() {
               <option value="">All Status</option>
               <option value="success">Success</option>
               <option value="failed">Failed</option>
+              <option value="pending">Pending</option>
             </select>
           </div>
 
@@ -333,10 +368,29 @@ export default function NotificationsPage() {
                           <CheckCircle className="w-4 h-4" />
                           <span className="text-sm font-medium">Success</span>
                         </div>
+                      ) : notification.status === "pending" ? (
+                        <div className="flex items-center gap-2 text-yellow-600">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-sm font-medium">Pending</span>
+                        </div>
                       ) : (
-                        <div className="flex items-center gap-2 text-red-600">
-                          <XCircle className="w-4 h-4" />
-                          <span className="text-sm font-medium">Failed</span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 text-red-600">
+                            <XCircle className="w-4 h-4" />
+                            <span className="text-sm font-medium">Failed</span>
+                          </div>
+                          <button
+                            onClick={() => handleRetry(notification.id)}
+                            disabled={retrying === notification.id}
+                            className="ml-2 text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Retry sending"
+                          >
+                            {retrying === notification.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-4 h-4" />
+                            )}
+                          </button>
                         </div>
                       )}
                     </td>

@@ -115,10 +115,11 @@ async function logNotification(
   phone: string,
   type: string,
   apiKeyLabel: string,
-  status: "success" | "failed",
+  status: "success" | "failed" | "pending",
   message: string,
   errorMessage?: string,
-  eventId?: string
+  eventId?: string,
+  metadata?: Record<string, any>
 ) {
   try {
     await addDoc(collection(db, "notifications_log"), {
@@ -130,6 +131,7 @@ async function logNotification(
       message_content: message,
       error: errorMessage || null,
       event_id: eventId || null,
+      metadata: metadata || null,
       created_at: new Date().toISOString(),
     });
   } catch (error) {
@@ -186,7 +188,19 @@ export async function sendWhatsAppMessage(
       }),
     });
 
+    let errorDetail = "";
     const isSuccess = response.ok;
+
+    if (!isSuccess) {
+      try {
+        const errorData = await response.json();
+        errorDetail = `HTTP ${response.status}: ${
+          errorData.message || errorData.error || JSON.stringify(errorData)
+        }`;
+      } catch {
+        errorDetail = `HTTP ${response.status}: ${response.statusText}`;
+      }
+    }
 
     // Update API key usage
     if (isSuccess) {
@@ -202,8 +216,9 @@ export async function sendWhatsAppMessage(
         apiKey.label,
         isSuccess ? "success" : "failed",
         message,
-        isSuccess ? undefined : `HTTP ${response.status}`,
-        eventId
+        isSuccess ? undefined : errorDetail,
+        eventId,
+        variables // Pass variables as metadata for retry
       );
     }
 
@@ -239,7 +254,8 @@ export async function sendWhatsAppMessage(
               "success",
               message,
               undefined,
-              eventId
+              eventId,
+              variables // Pass variables as metadata
             );
           }
           return {
@@ -251,7 +267,7 @@ export async function sendWhatsAppMessage(
 
       return {
         success: false,
-        error: `Failed to send message: HTTP ${response.status}`,
+        error: `Failed to send message: ${errorDetail}`,
       };
     }
   } catch (error) {
@@ -323,7 +339,9 @@ export async function sendWhatsAppMessageWithMedia(
         apiKey.label,
         isSuccess ? "success" : "failed",
         message,
-        isSuccess ? undefined : `HTTP ${response.status}`
+        isSuccess ? undefined : `HTTP ${response.status}`,
+        undefined,
+        variables // Pass variables as metadata
       );
     }
 

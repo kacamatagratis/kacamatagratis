@@ -45,8 +45,12 @@ export async function GET(request: NextRequest) {
       welcome_messages_sent: 0,
       referrer_alerts_sent: 0,
       event_reminders_sent: 0,
+      failed_retries: 0,
       errors: [] as string[],
     };
+
+    // First, retry any failed notifications
+    await retryFailedNotifications(results);
 
     // Check for pending welcome messages
     await processPendingWelcomeMessages(
@@ -77,6 +81,68 @@ export async function GET(request: NextRequest) {
         error: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
+    );
+  }
+}
+
+async function retryFailedNotifications(results: any) {
+  try {
+    const notificationsRef = collection(db, "notifications_log");
+    
+    // Get all failed notifications
+    const failedQuery = query(
+      notificationsRef,
+      where("status", "==", "failed"),
+      orderBy("created_at", "desc")
+    );
+    const failedSnap = await getDocs(failedQuery);
+
+    console.log(`[AUTOMATION] Found ${failedSnap.size} failed notifications to retry`);
+
+    for (const notificationDoc of failedSnap.docs) {
+      const notification = notificationDoc.data();
+      const notificationId = notificationDoc.id;
+      const metadata = notification.metadata || {};
+
+      // Build variables from metadata
+      const variables = {
+        sapaan: metadata.sapaan || "Bapak/Ibu",
+        name: metadata.name || "",
+        city: metadata.city || "",
+        referral_code: metadata.referral_code || "",
+        event_title: metadata.event_title || "",
+        zoom_link: metadata.zoom_link || "",
+        referral_count: metadata.referral_count || "0",
+      };
+
+      console.log(
+        `[AUTOMATION] Retrying ${notification.type} for ${notification.target_phone}`
+      );
+
+      // Attempt to resend
+      const result = await sendWhatsAppMessage(
+        notification.target_phone,
+        notification.type,
+        variables,
+        notification.participant_id,
+        notification.event_id
+      );
+
+      if (result.success) {
+        results.failed_retries++;
+        console.log(`[AUTOMATION] Successfully retried notification ${notificationId}`);
+      } else {
+        results.errors.push(
+          `Retry failed for ${notification.type} to ${notification.target_phone}: ${result.error}`
+        );
+      }
+    }
+  } catch (error) {
+    console.error("[AUTOMATION] Error retrying failed notifications:", error);
+    results.errors.push(
+      `Failed retries error: ${
+        error instanceof Error ? error.message : "Unknown"
+      }`
     );
   }
 }
@@ -138,9 +204,6 @@ async function processPendingWelcomeMessages(
           `Failed to send welcome message to ${participant.name}: ${result.error}`
         );
       }
-
-      // Add delay between messages
-      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   } catch (error) {
     console.error("[AUTOMATION] Error processing welcome messages:", error);
@@ -227,9 +290,6 @@ async function processPendingReferrerAlerts(
           `Failed to send referrer alert to ${referrer.name}: ${result.error}`
         );
       }
-
-      // Add delay between messages
-      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   } catch (error) {
     console.error("[AUTOMATION] Error processing referrer alerts:", error);
@@ -309,9 +369,6 @@ async function processEventReminders(hoursBefore: number, results: any) {
             `Failed to send event reminder to ${participant.name}: ${result.error}`
           );
         }
-
-        // Add delay between messages
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
   } catch (error) {

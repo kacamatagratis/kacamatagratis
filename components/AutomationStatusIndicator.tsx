@@ -95,8 +95,9 @@ export default function AutomationStatusIndicator() {
           errors: data.results?.errors || [],
         });
         setLastRun(new Date());
-        // Also refresh status after automation runs
-        fetchStatus();
+        
+        // Refresh status to update last activity and pending counts
+        await fetchStatus();
       } else {
         setLastResult({
           welcome: 0,
@@ -104,6 +105,9 @@ export default function AutomationStatusIndicator() {
           events: 0,
           errors: [data.message || "Automation failed"],
         });
+        
+        // Still refresh status even on failure
+        await fetchStatus();
       }
     } catch (error) {
       console.error("Failed to run automation:", error);
@@ -137,25 +141,44 @@ export default function AutomationStatusIndicator() {
   useEffect(() => {
     // Fetch status immediately on mount
     fetchStatus();
+  }, []);
+
+  // Separate effect for automation intervals
+  useEffect(() => {
+    // Clear any existing intervals first
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
 
     // Start automation if enabled
-    if (isRunning) {
+    if (isRunning && intervalSeconds > 0) {
+      console.log(`[Automation] Starting with interval: ${intervalSeconds}s`);
+
       // Run automation immediately
       runAutomation();
 
-      // Set initial countdown based on interval setting
+      // Set initial countdown
       setCountdown(intervalSeconds);
 
       // Set up interval to run automation
       intervalRef.current = setInterval(() => {
+        console.log(`[Automation] Running automation cycle...`);
         runAutomation();
         setCountdown(intervalSeconds);
-      }, intervalSeconds * 1000); // Convert seconds to milliseconds
+      }, intervalSeconds * 1000);
 
       // Set up countdown interval (updates every second)
       countdownIntervalRef.current = setInterval(() => {
-        setCountdown((prev) => Math.max(0, prev - 1));
-      }, 1000); // 1 second
+        setCountdown((prev) => {
+          const newValue = Math.max(0, prev - 1);
+          return newValue;
+        });
+      }, 1000);
     }
 
     return () => {
@@ -168,7 +191,7 @@ export default function AutomationStatusIndicator() {
         countdownIntervalRef.current = null;
       }
     };
-  }, [isRunning, intervalSeconds]); // Re-run when running state or interval changes
+  }, [isRunning, intervalSeconds]); // Only re-run when these change
 
   const toggleAutomation = () => {
     setIsRunning(!isRunning);

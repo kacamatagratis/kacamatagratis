@@ -84,6 +84,24 @@ export async function POST(request: NextRequest) {
       participantData
     );
 
+    // Create pending welcome notification log so automation can pick it up
+    try {
+      await addDoc(collection(db, "notifications_log"), {
+        participant_id: docRef.id,
+        target_phone: participantData.phone,
+        type: "welcome",
+        api_key_used: null,
+        status: "pending",
+        message_content: null,
+        error: null,
+        event_id: null,
+        created_at: new Date().toISOString(),
+        metadata: participantData,
+      });
+    } catch (err) {
+      console.error("Failed to create pending notification log:", err);
+    }
+
     // Generate referral URL
     const referralUrl = `${
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
