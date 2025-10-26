@@ -15,6 +15,7 @@ import {
   Share2,
 } from "lucide-react";
 import Link from "next/link";
+import AutomationStatusIndicator from "@/components/AutomationStatusIndicator";
 
 export const dynamic = "force-dynamic";
 
@@ -185,6 +186,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 day: "numeric",
               })}
             </span>
+            <AutomationStatusIndicator />
           </div>
         </header>
 

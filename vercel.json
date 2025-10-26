@@ -1,5 +1,6 @@
 {
-  "crons": [
+  "_comment": "Cron disabled - Using client-side polling in admin dashboard instead. Uncomment to enable server-side cron (requires Vercel Pro plan)",
+  "_crons": [
     {
       "path": "/api/cron/automation",
       "schedule": "* * * * *"

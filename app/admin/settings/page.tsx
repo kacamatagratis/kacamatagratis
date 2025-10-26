@@ -52,6 +52,7 @@ interface AutomationSettings {
   referrer_alert_delay_minutes: number;
   event_reminder_hours_before: number;
   automation_enabled: boolean;
+  automation_engine_interval_seconds: number;
 }
 
 export default function SettingsPage() {
@@ -70,6 +71,7 @@ export default function SettingsPage() {
       referrer_alert_delay_minutes: 5,
       event_reminder_hours_before: 1,
       automation_enabled: true,
+      automation_engine_interval_seconds: 60,
     });
 
   // Template form state
@@ -94,6 +96,7 @@ export default function SettingsPage() {
           referrer_alert_delay_minutes: 5,
           event_reminder_hours_before: 1,
           automation_enabled: true,
+          automation_engine_interval_seconds: 60,
         };
         await setDoc(settingsRef, defaultSettings);
         setAutomationSettings(defaultSettings);
@@ -848,7 +851,7 @@ export default function SettingsPage() {
                     type="number"
                     min="1"
                     max="1440"
-                    value={automationSettings.welcome_delay_minutes}
+                    value={automationSettings.welcome_delay_minutes || 5}
                     onChange={(e) =>
                       setAutomationSettings({
                         ...automationSettings,
@@ -861,7 +864,7 @@ export default function SettingsPage() {
                 </div>
 
                 <p className="text-xs text-gray-500 mt-2">
-                  Current: Wait {automationSettings.welcome_delay_minutes}{" "}
+                  Current: Wait {automationSettings.welcome_delay_minutes || 5}{" "}
                   minute(s) before sending welcome message
                 </p>
               </div>
@@ -886,7 +889,7 @@ export default function SettingsPage() {
                     type="number"
                     min="1"
                     max="72"
-                    value={automationSettings.event_reminder_hours_before}
+                    value={automationSettings.event_reminder_hours_before || 1}
                     onChange={(e) =>
                       setAutomationSettings({
                         ...automationSettings,
@@ -903,8 +906,57 @@ export default function SettingsPage() {
 
                 <p className="text-xs text-gray-500 mt-2">
                   Current: Send reminders{" "}
-                  {automationSettings.event_reminder_hours_before} hour(s)
+                  {automationSettings.event_reminder_hours_before || 1} hour(s)
                   before event starts
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Automation Engine Interval */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <Clock className="w-6 h-6 text-indigo-600 shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Automation Engine Interval
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Set how often the automation engine checks for pending
+                  messages (client-side polling when dashboard is open).
+                </p>
+
+                <div className="flex items-center gap-4">
+                  <input
+                    type="number"
+                    min="10"
+                    max="300"
+                    value={
+                      automationSettings.automation_engine_interval_seconds ||
+                      60
+                    }
+                    onChange={(e) =>
+                      setAutomationSettings({
+                        ...automationSettings,
+                        automation_engine_interval_seconds:
+                          parseInt(e.target.value) || 60,
+                      })
+                    }
+                    className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <span className="text-sm text-gray-600">
+                    second(s) interval
+                  </span>
+                </div>
+
+                <p className="text-xs text-gray-500 mt-2">
+                  Current: Check every{" "}
+                  {automationSettings.automation_engine_interval_seconds || 60}{" "}
+                  second(s)
+                </p>
+                <p className="text-xs text-yellow-600 mt-1">
+                  ⚠️ Shorter intervals = more frequent checks but higher
+                  resource usage. Recommended: 60 seconds (1 minute)
                 </p>
               </div>
             </div>

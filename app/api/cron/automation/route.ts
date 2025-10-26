@@ -323,3 +323,9 @@ async function processEventReminders(hoursBefore: number, results: any) {
     );
   }
 }
+
+// POST handler for client-side automation runner
+export async function POST(request: NextRequest) {
+  // Reuse the same logic as GET
+  return GET(request);
+}

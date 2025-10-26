@@ -13,6 +13,7 @@ import {
 import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import RegistrationForm from "@/components/RegistrationForm";
+import LatestEvent from "@/components/LatestEvent";
 
 export const dynamic = "force-dynamic";
 
@@ -871,6 +872,13 @@ export default function Home() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Latest Event Section */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <LatestEvent />
         </div>
       </section>
 
