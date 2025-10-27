@@ -135,7 +135,13 @@ Anda berhasil mengajak {new_participant_name} untuk bergabung!
 Terus bagikan kode referral Anda untuk mendapatkan lebih banyak reward!
 
 Terima kasih! 🙏`,
-      variables: ["sapaan", "name", "new_participant_name", "referral_count", "referrer_sequence"],
+      variables: [
+        "sapaan",
+        "name",
+        "new_participant_name",
+        "referral_count",
+        "referrer_sequence",
+      ],
       created_at: new Date().toISOString(),
     },
     {

@@ -46,10 +46,16 @@ export default function RegistrationForm() {
       if (response.ok) {
         setSuccess(true);
 
+        // Fetch general settings for WhatsApp redirect number
+        const settingsResponse = await fetch("/api/general-settings");
+        const settingsData = await settingsResponse.json();
+
+        const adminPhone = settingsData.whatsapp_redirect_number
+          ? settingsData.whatsapp_redirect_number.replace(/[^0-9]/g, "") // Remove formatting
+          : "6281517800900"; // Default fallback
+
         // Redirect to WhatsApp after 2 seconds
         setTimeout(() => {
-          const adminPhone =
-            process.env.NEXT_PUBLIC_ADMIN_WHATSAPP_NUMBER || "6281234567890";
           const message = encodeURIComponent(
             `Halo Admin, saya ${formData.name} dari ${formData.city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!`
           );

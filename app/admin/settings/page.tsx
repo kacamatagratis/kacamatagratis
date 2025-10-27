@@ -13,6 +13,8 @@ import {
   Loader2,
   Clock,
   Info,
+  Phone,
+  Globe,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import {
@@ -58,14 +60,25 @@ interface AutomationSettings {
   automation_engine_interval_seconds: number;
 }
 
+interface GeneralSettings {
+  whatsapp_redirect_number: string;
+  referral_domain: string;
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<
-    "templates" | "apikeys" | "automation"
+    "templates" | "apikeys" | "automation" | "general"
   >("templates");
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [apiKeys, setApiKeys] = useState<DripSenderKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // General settings
+  const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
+    whatsapp_redirect_number: "+62 815-1780-0900",
+    referral_domain: "www.kacamatagratis.org",
+  });
 
   // Automation settings
   const [automationSettings, setAutomationSettings] =
@@ -84,6 +97,56 @@ export default function SettingsPage() {
   // API Key form state
   const [newApiKey, setNewApiKey] = useState("");
   const [newApiKeyLabel, setNewApiKeyLabel] = useState("");
+
+  const loadGeneralSettings = async () => {
+    try {
+      const settingsRef = doc(db, "general_settings", "config");
+      const settingsDoc = await getDoc(settingsRef);
+
+      const defaultSettings: GeneralSettings = {
+        whatsapp_redirect_number: "+62 815-1780-0900",
+        referral_domain: "www.kacamatagratis.org",
+      };
+
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data();
+        const mergedSettings: GeneralSettings = {
+          whatsapp_redirect_number:
+            data.whatsapp_redirect_number ??
+            defaultSettings.whatsapp_redirect_number,
+          referral_domain:
+            data.referral_domain ?? defaultSettings.referral_domain,
+        };
+        setGeneralSettings(mergedSettings);
+      } else {
+        await setDoc(settingsRef, defaultSettings);
+        setGeneralSettings(defaultSettings);
+      }
+    } catch (error) {
+      console.error("Error loading general settings:", error);
+    }
+  };
+
+  const saveGeneralSettings = async () => {
+    console.log("[SETTINGS] Saving general settings:", generalSettings);
+    setSaving(true);
+    try {
+      const settingsRef = doc(db, "general_settings", "config");
+      console.log("[SETTINGS] Writing to Firebase...");
+      await setDoc(settingsRef, generalSettings);
+      console.log("[SETTINGS] Successfully saved!");
+      alert("General settings saved successfully!");
+      setSaving(false);
+    } catch (error) {
+      console.error("[SETTINGS] Error saving general settings:", error);
+      alert(
+        `Failed to save general settings: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+      setSaving(false);
+    }
+  };
 
   const loadAutomationSettings = async () => {
     try {
@@ -378,6 +441,7 @@ export default function SettingsPage() {
     loadTemplates();
     loadApiKeys();
     loadAutomationSettings();
+    loadGeneralSettings();
   }, []);
 
   if (loading) {
@@ -447,6 +511,23 @@ export default function SettingsPage() {
               <span>Automation</span>
             </div>
             {activeTab === "automation" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("general")}
+            className={`pb-3 px-2 font-semibold transition-colors relative ${
+              activeTab === "general"
+                ? "text-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Info className="w-5 h-5" />
+              <span>General</span>
+            </div>
+            {activeTab === "general" && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
             )}
           </button>
@@ -1206,6 +1287,143 @@ export default function SettingsPage() {
                 <Save className="w-5 h-5" />
               )}
               <span>Save Automation Settings</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* General Settings Tab */}
+      {activeTab === "general" && (
+        <div className="space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              General Settings
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Configure general application settings like WhatsApp redirect
+              number and referral domain.
+            </p>
+          </div>
+
+          {/* WhatsApp Redirect Number */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <Phone className="w-6 h-6 text-green-600 shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  WhatsApp Redirect Number
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  After successful registration, users will be redirected to
+                  this WhatsApp number. Enter the number in international format
+                  (e.g., +62 815-1780-0900).
+                </p>
+
+                <div className="flex items-center gap-4">
+                  <input
+                    type="text"
+                    value={generalSettings.whatsapp_redirect_number}
+                    onChange={(e) =>
+                      setGeneralSettings({
+                        ...generalSettings,
+                        whatsapp_redirect_number: e.target.value,
+                      })
+                    }
+                    placeholder="+62 815-1780-0900"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <p className="text-xs text-gray-500 mt-2">
+                  Current: {generalSettings.whatsapp_redirect_number}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Referral Domain */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <Globe className="w-6 h-6 text-blue-600 shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Referral Domain
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  The domain used for generating referral links. This will be
+                  used in the format: https://{generalSettings.referral_domain}
+                  ?ref=PHONENUMBER
+                </p>
+
+                <div className="flex items-center gap-4">
+                  <input
+                    type="text"
+                    value={generalSettings.referral_domain}
+                    onChange={(e) =>
+                      setGeneralSettings({
+                        ...generalSettings,
+                        referral_domain: e.target.value,
+                      })
+                    }
+                    placeholder="www.kacamatagratis.org"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <p className="text-xs text-gray-500 mt-2">
+                  Current domain: https://{generalSettings.referral_domain}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Example referral link: https://
+                  {generalSettings.referral_domain}?ref=6281234567890
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Info Box */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3">
+              <Info className="w-6 h-6 text-blue-600 shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  How These Settings Work
+                </h3>
+                <div className="text-sm text-gray-600 space-y-2">
+                  <p>
+                    • <strong>WhatsApp Redirect:</strong> After a user
+                    successfully registers, they will be automatically
+                    redirected to WhatsApp to chat with this number.
+                  </p>
+                  <p>
+                    • <strong>Referral Domain:</strong> This domain is used to
+                    generate unique referral links for each participant. When
+                    someone clicks a referral link, the system tracks who
+                    referred them.
+                  </p>
+                  <p className="mt-3 pt-3 border-t border-blue-200">
+                    <strong>Note:</strong> Make sure the domain is correct and
+                    accessible. Changes will affect all new registrations
+                    immediately.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={saveGeneralSettings}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-semibold"
+            >
+              {saving ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Save className="w-5 h-5" />
+              )}
+              <span>Save General Settings</span>
             </button>
           </div>
         </div>

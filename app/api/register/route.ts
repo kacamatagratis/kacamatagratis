@@ -6,6 +6,8 @@ import {
   query,
   where,
   getDocs,
+  doc,
+  getDoc,
   serverTimestamp,
 } from "firebase/firestore";
 
@@ -149,10 +151,22 @@ export async function POST(request: NextRequest) {
       console.error("Failed to create pending notification log:", err);
     }
 
-    // Generate referral URL
-    const referralUrl = `${
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    }?ref=${participantData.referral_code}`;
+    // Generate referral URL using general settings
+    let referralDomain = "www.kacamatagratis.org"; // Default
+    try {
+      const settingsRef = doc(db, "general_settings", "config");
+      const settingsDoc = await getDoc(settingsRef);
+      if (settingsDoc.exists() && settingsDoc.data().referral_domain) {
+        referralDomain = settingsDoc.data().referral_domain;
+      }
+    } catch (settingsError) {
+      console.error(
+        "Failed to fetch referral domain, using default:",
+        settingsError
+      );
+    }
+
+    const referralUrl = `https://${referralDomain}?ref=${participantData.referral_code}`;
 
     // Create pending referrer alert notification if there's a referrer
     if (referrerPhone) {

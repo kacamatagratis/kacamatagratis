@@ -317,15 +317,19 @@ async function processPendingReferrerAlerts(
       const newParticipantName = metadata.new_participant_name || "Unknown";
       const referrerSequence = metadata.referrer_sequence || 1;
 
-      console.log(`[AUTOMATION] Processing referrer alert for phone: ${targetPhone}`);
+      console.log(
+        `[AUTOMATION] Processing referrer alert for phone: ${targetPhone}`
+      );
 
       // Get referrer information - try different phone formats
       const participantsRef = collection(db, "participants");
-      
+
       // Normalize phone formats to try
       const phoneWithoutPlus = targetPhone.replace(/\+/g, "");
-      const phoneWithPlus = targetPhone.startsWith("+") ? targetPhone : `+${phoneWithoutPlus}`;
-      
+      const phoneWithPlus = targetPhone.startsWith("+")
+        ? targetPhone
+        : `+${phoneWithoutPlus}`;
+
       const referrerQuery = query(
         participantsRef,
         where("phone", "in", [targetPhone, phoneWithoutPlus, phoneWithPlus])
@@ -333,7 +337,9 @@ async function processPendingReferrerAlerts(
       const referrerSnap = await getDocs(referrerQuery);
 
       if (referrerSnap.empty) {
-        console.log(`[AUTOMATION] Referrer not found for phone ${targetPhone} (tried: ${targetPhone}, ${phoneWithoutPlus}, ${phoneWithPlus})`);
+        console.log(
+          `[AUTOMATION] Referrer not found for phone ${targetPhone} (tried: ${targetPhone}, ${phoneWithoutPlus}, ${phoneWithPlus})`
+        );
         // Delete invalid pending notification
         await deleteDoc(doc(db, "notifications_log", pendingDoc.id));
         results.errors.push(`Referrer not found for phone ${targetPhone}`);
@@ -342,8 +348,10 @@ async function processPendingReferrerAlerts(
 
       const referrer = referrerSnap.docs[0].data();
       const referrerId = referrerSnap.docs[0].id;
-      
-      console.log(`[AUTOMATION] Found referrer: ${referrer.name} (${referrer.phone})`);
+
+      console.log(
+        `[AUTOMATION] Found referrer: ${referrer.name} (${referrer.phone})`
+      );
 
       // Count total successful referrals
       const referralsQuery = query(
@@ -360,7 +368,7 @@ async function processPendingReferrerAlerts(
 
       const result = await sendWhatsAppMessage(
         targetPhone,
-        "referral",  // Changed from "referrer_alert" to match Firebase template
+        "referral", // Changed from "referrer_alert" to match Firebase template
         {
           sapaan: referrer.sapaan,
           name: referrer.name,

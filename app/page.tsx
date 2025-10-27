@@ -54,7 +54,7 @@ export default function Home() {
         if (data.success && data.event) {
           setHasEvent(true);
           const targetDate = new Date(data.event.start_time);
-          
+
           const updateCountdown = () => {
             const now = new Date().getTime();
             const distance = targetDate.getTime() - now;
@@ -65,7 +65,9 @@ export default function Home() {
                 hours: Math.floor(
                   (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
                 ),
-                minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+                minutes: Math.floor(
+                  (distance % (1000 * 60 * 60)) / (1000 * 60)
+                ),
                 seconds: Math.floor((distance % (1000 * 60)) / 1000),
               });
             } else {
@@ -75,7 +77,7 @@ export default function Home() {
 
           updateCountdown();
           const interval = setInterval(updateCountdown, 1000);
-          
+
           return () => clearInterval(interval);
         } else {
           setHasEvent(false);
@@ -877,7 +879,9 @@ export default function Home() {
                   <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
                     {timeLeft.days}
                   </div>
-                  <div className="text-sm sm:text-base text-green-100">Hari</div>
+                  <div className="text-sm sm:text-base text-green-100">
+                    Hari
+                  </div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
                   <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
@@ -889,13 +893,17 @@ export default function Home() {
                   <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
                     {timeLeft.minutes}
                   </div>
-                  <div className="text-sm sm:text-base text-green-100">Menit</div>
+                  <div className="text-sm sm:text-base text-green-100">
+                    Menit
+                  </div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
                   <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
                     {timeLeft.seconds}
                   </div>
-                  <div className="text-sm sm:text-base text-green-100">Detik</div>
+                  <div className="text-sm sm:text-base text-green-100">
+                    Detik
+                  </div>
                 </div>
               </div>
             </div>
