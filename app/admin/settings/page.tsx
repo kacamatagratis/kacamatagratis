@@ -45,6 +45,9 @@ interface DripSenderKey {
   last_used?: string;
   usage_count: number;
   created_at?: string;
+  health_status?: "unknown" | "working" | "failed" | "testing";
+  health_checked_at?: string;
+  health_error?: string;
 }
 
 interface AutomationSettings {
@@ -276,28 +279,68 @@ export default function SettingsPage() {
     }
   };
 
-  const testApiKey = async (apiKey: string) => {
+  const testApiKey = async (keyId: string, apiKey: string, label: string) => {
     try {
-      const response = await fetch("https://api.dripsender.id/send", {
+      // Update status to testing
+      setApiKeys((prev) =>
+        prev.map((k) =>
+          k.id === keyId ? { ...k, health_status: "testing" as const } : k
+        )
+      );
+
+      const response = await fetch("/api/dripsender/test", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          api_key: apiKey,
-          phone: "6281234567890", // Test number
-          text: "Test connection from Kacamata Gratis Admin",
-        }),
+        body: JSON.stringify({ apiKey, label }),
       });
 
-      if (response.ok) {
-        alert("✅ API Key is working!");
+      const result = await response.json();
+
+      // Update Firestore with health status
+      const keyRef = doc(db, "dripsender_keys", keyId);
+      await updateDoc(keyRef, {
+        health_status: result.status,
+        health_checked_at: new Date().toISOString(),
+        health_error: result.error || result.details || null,
+      });
+
+      // Reload to show updated status
+      await loadApiKeys();
+
+      if (result.success) {
+        alert(`✅ ${label}: API Key is working!`);
       } else {
-        alert("❌ API Key failed. Please check the key.");
+        alert(
+          `❌ ${label}: ${result.error || "Failed"}\n${result.details || ""}`
+        );
       }
     } catch (error) {
+      console.error("Error testing API key:", error);
       alert("❌ Connection error. Please try again.");
+
+      // Update status to unknown on error
+      setApiKeys((prev) =>
+        prev.map((k) =>
+          k.id === keyId ? { ...k, health_status: "unknown" as const } : k
+        )
+      );
     }
+  };
+
+  const testAllApiKeys = async () => {
+    if (!confirm("Test all API keys? This will check each key's status.")) {
+      return;
+    }
+
+    for (const key of apiKeys) {
+      await testApiKey(key.id, key.api_key, key.label);
+      // Small delay between tests
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    alert("✅ All API keys have been tested!");
   };
 
   // Load data on mount
@@ -645,11 +688,52 @@ export default function SettingsPage() {
       {/* API Keys Tab */}
       {activeTab === "apikeys" && (
         <div className="space-y-6">
+          {/* API Keys Health Summary */}
+          {apiKeys.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-1">Total Keys</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {apiKeys.length}
+                </p>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-600 mb-1">Working</p>
+                <p className="text-2xl font-bold text-green-900">
+                  {apiKeys.filter((k) => k.health_status === "working").length}
+                </p>
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-600 mb-1">Failed</p>
+                <p className="text-2xl font-bold text-red-900">
+                  {apiKeys.filter((k) => k.health_status === "failed").length}
+                </p>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-600 mb-1">Active</p>
+                <p className="text-2xl font-bold text-blue-900">
+                  {apiKeys.filter((k) => k.is_active).length}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Add New API Key */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Add New API Key
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Add New API Key
+              </h3>
+              {apiKeys.length > 0 && (
+                <button
+                  onClick={testAllApiKeys}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                >
+                  <TestTube className="w-4 h-4" />
+                  <span>Test All Keys</span>
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -705,6 +789,9 @@ export default function SettingsPage() {
                     Usage
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Health
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -715,7 +802,7 @@ export default function SettingsPage() {
               <tbody className="divide-y divide-gray-200">
                 {apiKeys.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center">
+                    <td colSpan={6} className="px-6 py-8 text-center">
                       <p className="text-gray-500">
                         No API keys added yet. Add your first API key above.
                       </p>
@@ -736,6 +823,47 @@ export default function SettingsPage() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {key.usage_count} messages
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          {key.health_status === "testing" ? (
+                            <>
+                              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                              <span className="text-sm text-blue-600">
+                                Testing...
+                              </span>
+                            </>
+                          ) : key.health_status === "working" ? (
+                            <>
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-sm text-green-600 font-medium">
+                                Working
+                              </span>
+                            </>
+                          ) : key.health_status === "failed" ? (
+                            <>
+                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                              <span
+                                className="text-sm text-red-600 font-medium"
+                                title={key.health_error || "Failed"}
+                              >
+                                Failed
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                              <span className="text-sm text-gray-500">
+                                Unknown
+                              </span>
+                            </>
+                          )}
+                          {key.health_checked_at && (
+                            <span className="text-xs text-gray-400">
+                              ({new Date(key.health_checked_at).toLocaleTimeString()})
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <button
@@ -762,11 +890,18 @@ export default function SettingsPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => testApiKey(key.api_key)}
+                            onClick={() =>
+                              testApiKey(key.id, key.api_key, key.label)
+                            }
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                             title="Test API Key"
+                            disabled={key.health_status === "testing"}
                           >
-                            <TestTube className="w-4 h-4" />
+                            {key.health_status === "testing" ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <TestTube className="w-4 h-4" />
+                            )}
                           </button>
                           <button
                             onClick={() => deleteApiKey(key.id)}

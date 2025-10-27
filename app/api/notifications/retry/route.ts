@@ -54,21 +54,36 @@ export async function POST(request: NextRequest) {
       referral_count: metadata.referral_count || "0",
     };
 
-    // Attempt to resend the message
+    // Attempt to resend the message WITHOUT creating a new log entry
+    // We'll update the existing notification log instead
     const result = await sendWhatsAppMessage(
       phone,
       type,
       variables,
-      participantId,
+      undefined, // Don't pass participantId to prevent new log creation
       notification.event_id
     );
 
+    // Update the existing notification log
     if (result.success) {
+      await updateDoc(notificationRef, {
+        status: "success",
+        api_key_used: result.apiKeyUsed,
+        error: null,
+        retried_at: new Date().toISOString(),
+      });
+
       return NextResponse.json({
         success: true,
         message: "Message resent successfully",
       });
     } else {
+      // Update with new error
+      await updateDoc(notificationRef, {
+        error: result.error || "Failed to resend message",
+        retried_at: new Date().toISOString(),
+      });
+
       return NextResponse.json(
         {
           success: false,

@@ -16,17 +16,6 @@ const missingEnvVars = requiredEnvVars.filter(
   (varName) => !process.env[varName]
 );
 
-if (missingEnvVars.length > 0) {
-  console.error(
-    "❌ Missing Firebase environment variables:",
-    missingEnvVars.join(", ")
-  );
-  console.error(
-    "📝 Please add these variables to Vercel: Settings → Environment Variables"
-  );
-  console.error("📖 See VERCEL_404_FIX.md for detailed setup instructions");
-}
-
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,

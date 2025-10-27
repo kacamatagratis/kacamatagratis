@@ -101,7 +101,13 @@ export default function BroadcastPage() {
         ...doc.data(),
       })) as MessageTemplate[];
 
-      setTemplates(templatesData);
+      // Remove duplicates based on template name
+      const uniqueTemplates = templatesData.filter(
+        (template, index, self) =>
+          index === self.findIndex((t) => t.name === template.name)
+      );
+
+      setTemplates(uniqueTemplates);
       setLoading(false);
     } catch (error) {
       console.error("Error loading data:", error);
