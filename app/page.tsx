@@ -17,10 +17,19 @@ import LatestEvent from "@/components/LatestEvent";
 
 export const dynamic = "force-dynamic";
 
+interface Event {
+  id: string;
+  title: string;
+  start_time: string;
+  zoom_link: string;
+  description: string;
+}
+
 export default function Home() {
   const [isVisible, setIsVisible] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [hasEvent, setHasEvent] = useState(false);
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -37,33 +46,50 @@ export default function Home() {
 
     window.addEventListener("scroll", handleScroll);
 
-    // Countdown timer - set to next week
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + 7);
-    targetDate.setHours(19, 0, 0, 0); // 7 PM
+    // Fetch latest event to determine if countdown should show
+    const fetchLatestEvent = async () => {
+      try {
+        const response = await fetch("/api/events/latest");
+        const data = await response.json();
+        if (data.success && data.event) {
+          setHasEvent(true);
+          const targetDate = new Date(data.event.start_time);
+          
+          const updateCountdown = () => {
+            const now = new Date().getTime();
+            const distance = targetDate.getTime() - now;
 
-    const updateCountdown = () => {
-      const now = new Date().getTime();
-      const distance = targetDate.getTime() - now;
+            if (distance > 0) {
+              setTimeLeft({
+                days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+                hours: Math.floor(
+                  (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+                ),
+                minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+                seconds: Math.floor((distance % (1000 * 60)) / 1000),
+              });
+            } else {
+              setHasEvent(false); // Event has passed
+            }
+          };
 
-      if (distance > 0) {
-        setTimeLeft({
-          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-          hours: Math.floor(
-            (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-          ),
-          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((distance % (1000 * 60)) / 1000),
-        });
+          updateCountdown();
+          const interval = setInterval(updateCountdown, 1000);
+          
+          return () => clearInterval(interval);
+        } else {
+          setHasEvent(false);
+        }
+      } catch (error) {
+        console.error("Failed to fetch event:", error);
+        setHasEvent(false);
       }
     };
 
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
+    fetchLatestEvent();
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      clearInterval(interval);
     };
   }, []);
 
@@ -832,48 +858,50 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Countdown Timer */}
-      <section className="py-12 sm:py-16 bg-linear-to-r from-green-600 to-emerald-600 text-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="flex items-center justify-center gap-2 mb-6">
-              <Clock className="w-8 h-8" />
-              <h3 className="text-2xl sm:text-3xl font-bold">
-                Zoom Meeting Berikutnya
-              </h3>
-            </div>
-            <p className="text-lg sm:text-xl text-green-100 mb-8">
-              Bergabunglah dengan sesi informasi kami
-            </p>
-            <div className="grid grid-cols-4 gap-4 sm:gap-6 max-w-2xl mx-auto">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                  {timeLeft.days}
-                </div>
-                <div className="text-sm sm:text-base text-green-100">Hari</div>
+      {/* Countdown Timer - Only show if there's an upcoming event */}
+      {hasEvent && (
+        <section className="py-12 sm:py-16 bg-linear-to-r from-green-600 to-emerald-600 text-white">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto text-center">
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <Clock className="w-8 h-8" />
+                <h3 className="text-2xl sm:text-3xl font-bold">
+                  Zoom Meeting Berikutnya
+                </h3>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                  {timeLeft.hours}
+              <p className="text-lg sm:text-xl text-green-100 mb-8">
+                Bergabunglah dengan sesi informasi kami
+              </p>
+              <div className="grid grid-cols-4 gap-4 sm:gap-6 max-w-2xl mx-auto">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
+                    {timeLeft.days}
+                  </div>
+                  <div className="text-sm sm:text-base text-green-100">Hari</div>
                 </div>
-                <div className="text-sm sm:text-base text-green-100">Jam</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                  {timeLeft.minutes}
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
+                    {timeLeft.hours}
+                  </div>
+                  <div className="text-sm sm:text-base text-green-100">Jam</div>
                 </div>
-                <div className="text-sm sm:text-base text-green-100">Menit</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
-                <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                  {timeLeft.seconds}
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
+                    {timeLeft.minutes}
+                  </div>
+                  <div className="text-sm sm:text-base text-green-100">Menit</div>
                 </div>
-                <div className="text-sm sm:text-base text-green-100">Detik</div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
+                    {timeLeft.seconds}
+                  </div>
+                  <div className="text-sm sm:text-base text-green-100">Detik</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Latest Event Section */}
       <section className="py-16 bg-white">

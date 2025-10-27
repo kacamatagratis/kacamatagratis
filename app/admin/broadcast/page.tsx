@@ -529,9 +529,7 @@ export default function BroadcastPage() {
                 <code className="text-blue-600 font-bold">
                   {"{referral_code}"}
                 </code>
-                <p className="text-gray-600 mt-1">
-                  Full referral URL
-                </p>
+                <p className="text-gray-600 mt-1">Full referral URL</p>
               </div>
               <div className="bg-white rounded p-2">
                 <code className="text-blue-600 font-bold">{"{status}"}</code>

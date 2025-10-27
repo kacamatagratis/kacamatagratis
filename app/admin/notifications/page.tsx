@@ -12,6 +12,7 @@ import {
   XCircle,
   MessageSquare,
   RotateCcw,
+  Send,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
@@ -38,6 +39,8 @@ export default function NotificationsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [retrying, setRetrying] = useState<string | null>(null);
+  const [sendingNow, setSendingNow] = useState<string | null>(null);
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
@@ -53,6 +56,44 @@ export default function NotificationsPage() {
   useEffect(() => {
     filterNotifications();
   }, [filterType, filterStatus, filterDateFrom, filterDateTo, notifications]);
+
+  // Update countdown timers every second
+  useEffect(() => {
+    const updateCountdowns = () => {
+      const newCountdowns: Record<string, string> = {};
+      const now = new Date();
+
+      filteredNotifications.forEach((notification) => {
+        if (notification.status === "pending") {
+          const createdAt = new Date(notification.created_at);
+          const delay =
+            notification.type === "referrer_alert"
+              ? 0
+              : notification.type === "welcome"
+              ? 2
+              : 5; // in minutes
+          const sendAt = new Date(createdAt.getTime() + delay * 60 * 1000);
+          const diff = sendAt.getTime() - now.getTime();
+
+          if (diff <= 0) {
+            newCountdowns[notification.id] = "Ready to send";
+          } else {
+            const minutes = Math.floor(diff / 1000 / 60);
+            const seconds = Math.floor((diff / 1000) % 60);
+            newCountdowns[notification.id] = `${minutes}:${seconds
+              .toString()
+              .padStart(2, "0")}`;
+          }
+        }
+      });
+
+      setCountdowns(newCountdowns);
+    };
+
+    updateCountdowns();
+    const interval = setInterval(updateCountdowns, 1000);
+    return () => clearInterval(interval);
+  }, [filteredNotifications]);
 
   const loadNotifications = async () => {
     try {
@@ -133,6 +174,32 @@ export default function NotificationsPage() {
       alert("Failed to retry message");
     } finally {
       setRetrying(null);
+    }
+  };
+
+  const handleSendNow = async (notificationId: string) => {
+    if (sendingNow) return;
+
+    setSendingNow(notificationId);
+    try {
+      const response = await fetch("/api/cron/automation", {
+        method: "GET",
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert("Automation triggered! Message will be sent immediately.");
+        // Reload notifications to see updated status
+        setTimeout(() => loadNotifications(), 2000);
+      } else {
+        alert("Failed to trigger automation");
+      }
+    } catch (error) {
+      console.error("Error triggering automation:", error);
+      alert("Failed to send message now");
+    } finally {
+      setSendingNow(null);
     }
   };
 
@@ -369,9 +436,34 @@ export default function NotificationsPage() {
                           <span className="text-sm font-medium">Success</span>
                         </div>
                       ) : notification.status === "pending" ? (
-                        <div className="flex items-center gap-2 text-yellow-600">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-sm font-medium">Pending</span>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 text-yellow-600">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span className="text-sm font-medium">Pending</span>
+                          </div>
+                          {countdowns[notification.id] && (
+                            <span className="text-xs text-gray-500">
+                              {countdowns[notification.id]}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleSendNow(notification.id)}
+                            disabled={sendingNow === notification.id}
+                            className="mt-1 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Send immediately"
+                          >
+                            {sendingNow === notification.id ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                <span>Sending...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Send className="w-3 h-3" />
+                                <span>Send Now</span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">

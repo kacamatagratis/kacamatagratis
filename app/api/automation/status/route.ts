@@ -53,54 +53,36 @@ export async function GET(request: NextRequest) {
       const participantsRef = collection(db, "participants");
       const participantsSnap = await getDocs(participantsRef);
       checks.total_participants = participantsSnap.size;
-
-      // Check pending welcome messages
-      const now = new Date();
-      let pendingWelcome = 0;
-
-      for (const participantDoc of participantsSnap.docs) {
-        const participant = participantDoc.data();
-        if (!participant.registered_at) continue;
-
-        // Check if welcome already sent
-        const notificationsRef = collection(db, "notifications_log");
-        const notificationQuery = query(
-          notificationsRef,
-          where("participant_id", "==", participantDoc.id),
-          where("type", "==", "welcome")
-        );
-        const existingNotifications = await getDocs(notificationQuery);
-
-        if (existingNotifications.empty) {
-          pendingWelcome++;
-        }
-      }
-      checks.pending_welcome_messages = pendingWelcome;
-
-      // Check pending referrer alerts
-      const referredQuery = query(
-        participantsRef,
-        where("referrer_phone", "!=", null)
-      );
-      const referredSnap = await getDocs(referredQuery);
-
-      let pendingReferrer = 0;
-      for (const referredDoc of referredSnap.docs) {
-        const notificationsRef = collection(db, "notifications_log");
-        const notificationQuery = query(
-          notificationsRef,
-          where("participant_id", "==", referredDoc.id),
-          where("type", "==", "referrer_alert")
-        );
-        const existingNotifications = await getDocs(notificationQuery);
-
-        if (existingNotifications.empty) {
-          pendingReferrer++;
-        }
-      }
-      checks.pending_referrer_alerts = pendingReferrer;
     } catch (error) {
-      checks.errors.push("Failed to check participants");
+      checks.errors.push("Failed to count participants");
+    }
+
+    // Count pending welcome messages from notifications_log
+    try {
+      const notificationsRef = collection(db, "notifications_log");
+      const pendingWelcomeQuery = query(
+        notificationsRef,
+        where("type", "==", "welcome"),
+        where("status", "==", "pending")
+      );
+      const pendingWelcomeSnap = await getDocs(pendingWelcomeQuery);
+      checks.pending_welcome_messages = pendingWelcomeSnap.size;
+    } catch (error) {
+      checks.errors.push("Failed to count pending welcome messages");
+    }
+
+    // Count pending referrer alerts from notifications_log
+    try {
+      const notificationsRef = collection(db, "notifications_log");
+      const pendingReferrerQuery = query(
+        notificationsRef,
+        where("type", "==", "referrer_alert"),
+        where("status", "==", "pending")
+      );
+      const pendingReferrerSnap = await getDocs(pendingReferrerQuery);
+      checks.pending_referrer_alerts = pendingReferrerSnap.size;
+    } catch (error) {
+      checks.errors.push("Failed to count pending referrer alerts");
     }
 
     // Count upcoming events

@@ -123,6 +123,22 @@ Sampai jumpa di event! 👋`,
       created_at: new Date().toISOString(),
     },
     {
+      name: "Referrer Alert",
+      type: "referrer_alert",
+      content: `Selamat {sapaan} {name}! 🎊
+
+Anda berhasil mengajak {new_participant_name} untuk bergabung!
+
+📊 Total Referral Anda: {referral_count} orang
+🎯 Ini adalah referral ke-{referrer_sequence} Anda
+
+Terus bagikan kode referral Anda untuk mendapatkan lebih banyak reward!
+
+Terima kasih! 🙏`,
+      variables: ["sapaan", "name", "new_participant_name", "referral_count", "referrer_sequence"],
+      created_at: new Date().toISOString(),
+    },
+    {
       name: "Referral Success",
       type: "referral",
       content: `Selamat {sapaan} {name}! 🎊

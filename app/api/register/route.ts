@@ -31,18 +31,70 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if phone already exists
+    // Normalize phone to check format (remove +, convert 0 to 62)
+    let normalizedPhone = phone;
+    if (phone.startsWith("0")) {
+      normalizedPhone = "+62" + phone.substring(1);
+    } else if (!phone.startsWith("+")) {
+      normalizedPhone = "+" + phone;
+    }
+
+    // Check if phone already exists (check both formats)
+    const phoneWithoutPlus = normalizedPhone.replace(/\+/g, "");
     const existingQuery = query(
       collection(db, "participants"),
-      where("phone", "==", phone)
+      where("phone", "in", [phone, normalizedPhone, phoneWithoutPlus])
     );
     const existingSnap = await getDocs(existingQuery);
 
     if (!existingSnap.empty) {
       return NextResponse.json(
-        { error: "Phone number already registered" },
+        { error: "Nomor WhatsApp sudah terdaftar dalam sistem" },
         { status: 409 }
       );
+    }
+
+    // Validate WhatsApp number is active using DripSender
+    const formattedPhone = normalizedPhone.replace(/\+/g, "");
+    try {
+      // Get an active API key for validation
+      const keysRef = collection(db, "dripsender_keys");
+      const keysQuery = query(keysRef, where("is_active", "==", true));
+      const keysSnap = await getDocs(keysQuery);
+
+      if (!keysSnap.empty) {
+        const apiKey = keysSnap.docs[0].data().api_key;
+
+        // Check if WhatsApp number exists using DripSender check API
+        const checkResponse = await fetch("https://api.dripsender.id/check", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            api_key: apiKey,
+            phone: formattedPhone,
+          }),
+        });
+
+        if (checkResponse.ok) {
+          const checkData = await checkResponse.json();
+
+          // If WhatsApp not registered or not active
+          if (!checkData.registered || checkData.registered === false) {
+            return NextResponse.json(
+              {
+                error:
+                  "Nomor WhatsApp tidak aktif atau tidak terdaftar di WhatsApp",
+              },
+              { status: 400 }
+            );
+          }
+        }
+      }
+    } catch (checkError) {
+      console.error("WhatsApp validation error:", checkError);
+      // Continue registration even if validation fails (to avoid blocking legitimate users)
     }
 
     // Calculate referrer sequence if referrer exists
@@ -56,13 +108,8 @@ export async function POST(request: NextRequest) {
       referrerSequence = referrerSnap.size + 1;
     }
 
-    // Normalize phone to E.164 format for referral code
-    let normalizedPhone = phone;
-    if (phone.startsWith("0")) {
-      normalizedPhone = "+62" + phone.substring(1);
-    } else if (!phone.startsWith("+")) {
-      normalizedPhone = "+" + phone;
-    }
+    // normalizedPhone is already set above (no need to redeclare)
+    // Phone is already in E.164 format from earlier normalization
 
     // Create participant document
     const participantData = {
@@ -110,6 +157,9 @@ export async function POST(request: NextRequest) {
     // Create pending referrer alert notification if there's a referrer
     if (referrerPhone) {
       try {
+        console.log(
+          `[REGISTER] Creating pending referrer alert for ${referrerPhone} (new participant: ${name})`
+        );
         await addDoc(collection(db, "notifications_log"), {
           participant_id: docRef.id,
           target_phone: referrerPhone,
@@ -127,6 +177,7 @@ export async function POST(request: NextRequest) {
             referrer_sequence: referrerSequence,
           },
         });
+        console.log(`[REGISTER] Pending referrer alert created successfully`);
       } catch (err) {
         console.error("Failed to create pending referrer alert:", err);
       }

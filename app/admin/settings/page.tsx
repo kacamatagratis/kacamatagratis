@@ -90,17 +90,40 @@ export default function SettingsPage() {
       const settingsRef = doc(db, "automation_settings", "config");
       const settingsDoc = await getDoc(settingsRef);
 
+      const defaultSettings: AutomationSettings = {
+        welcome_delay_minutes: 2,
+        referrer_alert_delay_minutes: 0,
+        event_reminder_hours_before: 1,
+        automation_enabled: true,
+        automation_engine_interval_seconds: 60,
+      };
+
       if (settingsDoc.exists()) {
-        setAutomationSettings(settingsDoc.data() as AutomationSettings);
+        const data = settingsDoc.data();
+        // Merge with defaults to ensure all required fields exist
+        const mergedSettings: AutomationSettings = {
+          welcome_delay_minutes:
+            data.welcome_delay_minutes ?? defaultSettings.welcome_delay_minutes,
+          referrer_alert_delay_minutes:
+            data.referrer_alert_delay_minutes ??
+            defaultSettings.referrer_alert_delay_minutes,
+          event_reminder_hours_before:
+            data.event_reminder_hours_before ??
+            defaultSettings.event_reminder_hours_before,
+          automation_enabled:
+            data.automation_enabled ?? defaultSettings.automation_enabled,
+          automation_engine_interval_seconds:
+            data.automation_engine_interval_seconds ??
+            defaultSettings.automation_engine_interval_seconds,
+        };
+        console.log("[SETTINGS] Loaded settings:", mergedSettings);
+        setAutomationSettings(mergedSettings);
+
+        // Update Firebase with merged settings to clean up old fields
+        await setDoc(settingsRef, mergedSettings);
       } else {
         // Create default settings
-        const defaultSettings: AutomationSettings = {
-          welcome_delay_minutes: 5,
-          referrer_alert_delay_minutes: 5,
-          event_reminder_hours_before: 1,
-          automation_enabled: true,
-          automation_engine_interval_seconds: 60,
-        };
+        console.log("[SETTINGS] Creating default settings");
         await setDoc(settingsRef, defaultSettings);
         setAutomationSettings(defaultSettings);
       }
@@ -110,15 +133,22 @@ export default function SettingsPage() {
   };
 
   const saveAutomationSettings = async () => {
+    console.log("[SETTINGS] Saving automation settings:", automationSettings);
     setSaving(true);
     try {
       const settingsRef = doc(db, "automation_settings", "config");
+      console.log("[SETTINGS] Writing to Firebase...");
       await setDoc(settingsRef, automationSettings);
+      console.log("[SETTINGS] Successfully saved!");
       alert("Automation settings saved successfully!");
       setSaving(false);
     } catch (error) {
-      console.error("Error saving automation settings:", error);
-      alert("Failed to save automation settings");
+      console.error("[SETTINGS] Error saving automation settings:", error);
+      alert(
+        `Failed to save automation settings: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
       setSaving(false);
     }
   };
@@ -157,12 +187,7 @@ export default function SettingsPage() {
             type: "welcome",
             content:
               "Halo {sapaan} {name}! 👋\n\nTerima kasih sudah mendaftar di Kacamata Gratis dari {city}.\n\n🔗 Link Referral Anda:\n{referral_code}\n\nBagikan link di atas untuk mengajak teman!",
-            variables: [
-              "sapaan",
-              "name",
-              "city",
-              "referral_code",
-            ],
+            variables: ["sapaan", "name", "city", "referral_code"],
           },
           {
             name: "Referrer Alert",

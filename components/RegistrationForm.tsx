@@ -112,24 +112,6 @@ export default function RegistrationForm() {
         <p className="text-gray-600">
           Isi formulir di bawah untuk mengikuti sosialisasi program
         </p>
-        {referrerPhone && (
-          <div className="mt-4 inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Anda diundang oleh referral
-          </div>
-        )}
       </div>
 
       {error && (
