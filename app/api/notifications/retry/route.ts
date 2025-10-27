@@ -48,7 +48,11 @@ export async function POST(request: NextRequest) {
       sapaan: metadata.sapaan || "Bapak/Ibu",
       name: metadata.name || "",
       city: metadata.city || "",
-      referral_code: metadata.referral_code || "",
+      referral_code: metadata.referral_code
+        ? `${
+            process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.com"
+          }?ref=${metadata.referral_code}`
+        : "",
       event_title: metadata.event_title || "",
       zoom_link: metadata.zoom_link || "",
       referral_count: metadata.referral_count || "0",

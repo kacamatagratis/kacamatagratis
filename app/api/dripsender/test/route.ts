@@ -29,7 +29,17 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    const responseData = await response.json();
+    // Check content type before parsing
+    const contentType = response.headers.get("content-type");
+    let responseData: any = {};
+
+    if (contentType && contentType.includes("application/json")) {
+      responseData = await response.json();
+    } else {
+      // If not JSON, get as text
+      const textResponse = await response.text();
+      responseData = { message: textResponse };
+    }
 
     // Check if the response indicates the API key is valid
     // DripSender returns different error codes for invalid keys vs other errors

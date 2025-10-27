@@ -67,7 +67,9 @@ async function initializeAdminSettings() {
     created_at: new Date().toISOString(),
   });
 
-  console.log("✅ Admin settings initialized (username: admin, password: admin123)");
+  console.log(
+    "✅ Admin settings initialized (username: admin, password: admin123)"
+  );
 }
 
 /**
@@ -91,9 +93,11 @@ async function initializeMessageTemplates() {
 Terima kasih sudah mendaftar di Kacamata Gratis! 🎉
 
 📍 Kota: {city}
-🎫 Kode Referral Anda: {referral_code}
 
-Bagikan kode referral Anda ke teman dan keluarga untuk mendapatkan reward menarik!
+🔗 Link Referral Anda:
+{referral_code}
+
+Bagikan link di atas ke teman dan keluarga untuk mendapatkan reward menarik!
 
 Kami akan segera menghubungi Anda untuk informasi lebih lanjut.
 
@@ -183,7 +187,9 @@ async function initializeDripSenderKeys() {
     last_used: null,
   });
 
-  console.log("✅ DripSender keys initialized (Please add your real API keys and test them!)");
+  console.log(
+    "✅ DripSender keys initialized (Please add your real API keys and test them!)"
+  );
 }
 
 /**

@@ -4,13 +4,17 @@ import { useState, useEffect } from "react";
 import {
   MessageSquare,
   Send,
-  Filter,
   Users,
   Loader2,
   Calendar,
   CheckCircle,
   XCircle,
   X,
+  Search,
+  CheckSquare,
+  Square,
+  AlertCircle,
+  Info,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -26,6 +30,11 @@ interface Participant {
   phone: string;
   status: string;
   registered_at: string;
+  referral_code?: string;
+  profession?: string;
+  referrer_phone?: string;
+  referrer_sequence?: number;
+  unsubscribed?: boolean;
 }
 
 interface MessageTemplate {
@@ -50,17 +59,29 @@ export default function BroadcastPage() {
   const [sendProgress, setSendProgress] = useState(0);
   const [showProgressDialog, setShowProgressDialog] = useState(false);
 
+  // Participant selection state
+  const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(
+    new Set()
+  );
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Form state
   const [message, setMessage] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [filterCity, setFilterCity] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [filterDateFrom, setFilterDateFrom] = useState("");
-  const [filterDateTo, setFilterDateTo] = useState("");
 
   // Progress tracking
   const [sendLogs, setSendLogs] = useState<SendLog[]>([]);
   const [currentSending, setCurrentSending] = useState<string>("");
+
+  // Notification state
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    type: "info" | "error" | "warning";
+    message: string;
+  }>({ show: false, type: "info", message: "" });
+
+  // Confirmation dialog
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   // Results
   const [sendResults, setSendResults] = useState<{
@@ -69,7 +90,15 @@ export default function BroadcastPage() {
     failed: number;
   } | null>(null);
 
-  const [cities, setCities] = useState<string[]>([]);
+  const showNotification = (
+    type: "info" | "error" | "warning",
+    message: string
+  ) => {
+    setNotification({ show: true, type, message });
+    setTimeout(() => {
+      setNotification({ show: false, type, message: "" });
+    }, 3000);
+  };
 
   useEffect(() => {
     loadData();
@@ -86,12 +115,6 @@ export default function BroadcastPage() {
       })) as Participant[];
 
       setParticipants(participantsData);
-
-      // Extract unique cities
-      const uniqueCities = [
-        ...new Set(participantsData.map((p) => p.city)),
-      ].sort();
-      setCities(uniqueCities);
 
       // Load templates
       const templatesRef = collection(db, "message_templates");
@@ -118,27 +141,14 @@ export default function BroadcastPage() {
   const getFilteredParticipants = () => {
     let filtered = [...participants];
 
-    // City filter
-    if (filterCity) {
-      filtered = filtered.filter((p) => p.city === filterCity);
-    }
-
-    // Status filter
-    if (filterStatus) {
-      filtered = filtered.filter((p) => p.status === filterStatus);
-    }
-
-    // Date range filter
-    if (filterDateFrom) {
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (p) =>
-          new Date(p.registered_at) >= new Date(filterDateFrom + "T00:00:00")
-      );
-    }
-
-    if (filterDateTo) {
-      filtered = filtered.filter(
-        (p) => new Date(p.registered_at) <= new Date(filterDateTo + "T23:59:59")
+          p.name.toLowerCase().includes(query) ||
+          p.phone.includes(query) ||
+          p.city.toLowerCase().includes(query)
       );
     }
 
@@ -146,6 +156,34 @@ export default function BroadcastPage() {
   };
 
   const filteredParticipants = getFilteredParticipants();
+
+  // Get selected participants from filtered list
+  const getSelectedParticipantsData = () => {
+    return filteredParticipants.filter((p) => selectedParticipants.has(p.id));
+  };
+
+  const handleSelectAll = () => {
+    const allIds = new Set(filteredParticipants.map((p) => p.id));
+    setSelectedParticipants(allIds);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedParticipants(new Set());
+  };
+
+  const handleToggleParticipant = (id: string) => {
+    const newSelected = new Set(selectedParticipants);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedParticipants(newSelected);
+  };
+
+  const isAllSelected =
+    filteredParticipants.length > 0 &&
+    filteredParticipants.every((p) => selectedParticipants.has(p.id));
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplate(templateId);
@@ -157,23 +195,27 @@ export default function BroadcastPage() {
 
   const handleSendBroadcast = async () => {
     if (!message.trim()) {
-      alert("Please enter a message");
+      showNotification("error", "Please enter a message");
       return;
     }
 
-    if (filteredParticipants.length === 0) {
-      alert("No recipients match the filters");
+    const selectedData = getSelectedParticipantsData();
+
+    if (selectedData.length === 0) {
+      showNotification("error", "Please select at least one participant");
       return;
     }
 
-    if (
-      !confirm(`Send broadcast to ${filteredParticipants.length} participants?`)
-    ) {
-      return;
-    }
+    // Show confirmation dialog
+    setShowConfirmDialog(true);
+  };
+
+  const confirmSend = async () => {
+    setShowConfirmDialog(false);
+    const selectedData = getSelectedParticipantsData();
 
     // Initialize send logs
-    const initialLogs: SendLog[] = filteredParticipants.map((p) => ({
+    const initialLogs: SendLog[] = selectedData.map((p) => ({
       participant: p,
       status: "pending",
     }));
@@ -186,8 +228,8 @@ export default function BroadcastPage() {
     let successCount = 0;
     let failedCount = 0;
 
-    for (let i = 0; i < filteredParticipants.length; i++) {
-      const participant = filteredParticipants[i];
+    for (let i = 0; i < selectedData.length; i++) {
+      const participant = selectedData[i];
 
       // Update current sending status
       setCurrentSending(participant.name);
@@ -200,22 +242,47 @@ export default function BroadcastPage() {
       );
 
       try {
-        // Replace variables in message
-        let personalizedMessage = message
-          .replace(/{sapaan}/g, participant.sapaan)
-          .replace(/{name}/g, participant.name)
-          .replace(/{city}/g, participant.city);
+        // Replace ALL variables in message
+        const referralLink = participant.referral_code
+          ? `${
+              process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.com"
+            }?ref=${participant.referral_code}`
+          : "";
 
-        const result = await sendWhatsAppMessage(
-          participant.phone,
-          "broadcast",
-          {
-            sapaan: participant.sapaan,
-            name: participant.name,
-            city: participant.city,
+        let personalizedMessage = message
+          .replace(/{sapaan}/g, participant.sapaan || "")
+          .replace(/{name}/g, participant.name || "")
+          .replace(/{city}/g, participant.city || "")
+          .replace(/{profession}/g, participant.profession || "")
+          .replace(/{phone}/g, participant.phone || "")
+          .replace(/{referral_code}/g, referralLink)
+          .replace(/{referrer_phone}/g, participant.referrer_phone || "")
+          .replace(
+            /{referrer_sequence}/g,
+            String(participant.referrer_sequence || "")
+          )
+          .replace(/{status}/g, participant.status || "")
+          .replace(
+            /{registered_at}/g,
+            participant.registered_at
+              ? new Date(participant.registered_at).toLocaleDateString("id-ID")
+              : ""
+          );
+
+        // Send broadcast message directly (not using template)
+        const response = await fetch("/api/broadcast/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          participant.id
-        );
+          body: JSON.stringify({
+            phone: participant.phone,
+            message: personalizedMessage,
+            participantId: participant.id,
+          }),
+        });
+
+        const result = await response.json();
 
         if (result.success) {
           successCount++;
@@ -303,98 +370,107 @@ export default function BroadcastPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Filters & Recipients */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Recipient Filters */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Recipient Filters
-            </h2>
-
-            <div className="space-y-4">
-              {/* City Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  City
-                </label>
-                <select
-                  value={filterCity}
-                  onChange={(e) => setFilterCity(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">All Cities</option>
-                  {cities.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Status Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">All Status</option>
-                  <option value="belum_join">Belum Join</option>
-                  <option value="sudah_join">Sudah Join</option>
-                </select>
-              </div>
-
-              {/* Date Range */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Registered From
-                </label>
-                <input
-                  type="date"
-                  value={filterDateFrom}
-                  onChange={(e) => setFilterDateFrom(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Registered To
-                </label>
-                <input
-                  type="date"
-                  value={filterDateTo}
-                  onChange={(e) => setFilterDateTo(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <button
-                onClick={() => {
-                  setFilterCity("");
-                  setFilterStatus("");
-                  setFilterDateFrom("");
-                  setFilterDateTo("");
-                }}
-                className="w-full text-sm text-gray-600 hover:text-gray-900"
-              >
-                Clear Filters
-              </button>
-            </div>
-          </div>
-
           {/* Recipients Count */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-600 font-medium">Recipients</p>
+                <p className="text-sm text-blue-600 font-medium">Filtered</p>
                 <p className="text-3xl font-bold text-blue-900 mt-1">
                   {filteredParticipants.length}
                 </p>
               </div>
-              <Users className="w-12 h-12 text-blue-600" />
+              <div>
+                <p className="text-sm text-blue-600 font-medium text-right">
+                  Selected
+                </p>
+                <p className="text-3xl font-bold text-green-600 mt-1">
+                  {selectedParticipants.size}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Selection Controls */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Select Participants
+            </h2>
+
+            {/* Search */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by name, phone, or city..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Select All / Deselect All Buttons */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={handleSelectAll}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+              >
+                <CheckSquare className="w-4 h-4" />
+                Select All ({filteredParticipants.length})
+              </button>
+              <button
+                onClick={handleDeselectAll}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+              >
+                <Square className="w-4 h-4" />
+                Deselect All
+              </button>
+            </div>
+
+            {/* Participant List */}
+            <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+              {filteredParticipants.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  No participants found
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {filteredParticipants.map((participant) => (
+                    <div
+                      key={participant.id}
+                      onClick={() => handleToggleParticipant(participant.id)}
+                      className={`p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
+                        selectedParticipants.has(participant.id)
+                          ? "bg-blue-50"
+                          : ""
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1">
+                          {selectedParticipants.has(participant.id) ? (
+                            <CheckSquare className="w-5 h-5 text-blue-600" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">
+                            {participant.sapaan} {participant.name}
+                          </p>
+                          <p className="text-sm text-gray-600 truncate">
+                            {participant.phone}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {participant.city}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -418,8 +494,65 @@ export default function BroadcastPage() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-2">
-              Available variables: {"{sapaan}"}, {"{name}"}, {"{city}"}
+          </div>
+
+          {/* Variable Documentation */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+              <Info className="w-4 h-4" />
+              Available Variables
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+              <div className="bg-white rounded p-2">
+                <code className="text-blue-600 font-bold">{"{sapaan}"}</code>
+                <p className="text-gray-600 mt-1">Bapak/Ibu/Saudara</p>
+              </div>
+              <div className="bg-white rounded p-2">
+                <code className="text-blue-600 font-bold">{"{name}"}</code>
+                <p className="text-gray-600 mt-1">Participant name</p>
+              </div>
+              <div className="bg-white rounded p-2">
+                <code className="text-blue-600 font-bold">{"{city}"}</code>
+                <p className="text-gray-600 mt-1">City/Location</p>
+              </div>
+              <div className="bg-white rounded p-2">
+                <code className="text-blue-600 font-bold">
+                  {"{profession}"}
+                </code>
+                <p className="text-gray-600 mt-1">Profession/Job</p>
+              </div>
+              <div className="bg-white rounded p-2">
+                <code className="text-blue-600 font-bold">{"{phone}"}</code>
+                <p className="text-gray-600 mt-1">Phone number</p>
+              </div>
+              <div className="bg-white rounded p-2">
+                <code className="text-blue-600 font-bold">
+                  {"{referral_code}"}
+                </code>
+                <p className="text-gray-600 mt-1">
+                  Full referral URL
+                </p>
+              </div>
+              <div className="bg-white rounded p-2">
+                <code className="text-blue-600 font-bold">{"{status}"}</code>
+                <p className="text-gray-600 mt-1">belum_join/sudah_join</p>
+              </div>
+              <div className="bg-white rounded p-2">
+                <code className="text-blue-600 font-bold">
+                  {"{registered_at}"}
+                </code>
+                <p className="text-gray-600 mt-1">Registration date</p>
+              </div>
+              <div className="bg-white rounded p-2">
+                <code className="text-blue-600 font-bold">
+                  {"{referrer_sequence}"}
+                </code>
+                <p className="text-gray-600 mt-1">Referral count number</p>
+              </div>
+            </div>
+            <p className="text-xs text-blue-800 mt-3 italic">
+              💡 All variables will be automatically replaced with actual
+              participant data when sending.
             </p>
           </div>
 
@@ -431,8 +564,21 @@ export default function BroadcastPage() {
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              rows={10}
-              placeholder="Type your broadcast message here..."
+              rows={12}
+              placeholder={`Example message:
+
+Halo {sapaan} {name}! 👋
+
+Terima kasih sudah mendaftar di Kacamata Gratis! 🎉
+
+📍 Kota: {city}
+💼 Profesi: {profession}
+🔗 Link Referral: {referral_link}
+
+Bagikan link di atas untuk mengajak teman & dapat reward!
+
+Salam,
+Tim Kacamata Gratis`}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
             />
             <p className="text-sm text-gray-500 mt-2">
@@ -673,6 +819,85 @@ export default function BroadcastPage() {
                 {sending ? "Sending in progress..." : "Close"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-blue-100 p-3 rounded-lg">
+                  <Info className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Confirm Broadcast
+                </h3>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Send broadcast message to{" "}
+                <span className="font-bold text-gray-900">
+                  {getSelectedParticipantsData().length}
+                </span>{" "}
+                selected participant(s)?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmSend}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Send Now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Toast */}
+      {notification.show && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top">
+          <div
+            className={`rounded-lg shadow-lg p-4 flex items-center gap-3 min-w-[300px] ${
+              notification.type === "error"
+                ? "bg-red-50 border border-red-200"
+                : notification.type === "warning"
+                ? "bg-yellow-50 border border-yellow-200"
+                : "bg-blue-50 border border-blue-200"
+            }`}
+          >
+            {notification.type === "error" ? (
+              <XCircle className="w-5 h-5 text-red-600 shrink-0" />
+            ) : notification.type === "warning" ? (
+              <AlertCircle className="w-5 h-5 text-yellow-600 shrink-0" />
+            ) : (
+              <Info className="w-5 h-5 text-blue-600 shrink-0" />
+            )}
+            <p
+              className={`text-sm font-medium ${
+                notification.type === "error"
+                  ? "text-red-900"
+                  : notification.type === "warning"
+                  ? "text-yellow-900"
+                  : "text-blue-900"
+              }`}
+            >
+              {notification.message}
+            </p>
+            <button
+              onClick={() => setNotification({ ...notification, show: false })}
+              className="ml-auto"
+            >
+              <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+            </button>
           </div>
         </div>
       )}

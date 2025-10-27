@@ -9,6 +9,7 @@ import {
   getDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   orderBy,
   Timestamp,
 } from "firebase/firestore";
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
 async function retryFailedNotifications(results: any) {
   try {
     const notificationsRef = collection(db, "notifications_log");
-    
+
     // Get all failed notifications
     const failedQuery = query(
       notificationsRef,
@@ -97,7 +98,9 @@ async function retryFailedNotifications(results: any) {
     );
     const failedSnap = await getDocs(failedQuery);
 
-    console.log(`[AUTOMATION] Found ${failedSnap.size} failed notifications to retry`);
+    console.log(
+      `[AUTOMATION] Found ${failedSnap.size} failed notifications to retry`
+    );
 
     for (const notificationDoc of failedSnap.docs) {
       const notification = notificationDoc.data();
@@ -109,10 +112,14 @@ async function retryFailedNotifications(results: any) {
         sapaan: metadata.sapaan || "Bapak/Ibu",
         name: metadata.name || "",
         city: metadata.city || "",
-        referral_code: metadata.referral_code || "",
+        referral_code: metadata.referral_code 
+          ? `${process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.com"}?ref=${metadata.referral_code}`
+          : "",
         event_title: metadata.event_title || "",
         zoom_link: metadata.zoom_link || "",
         referral_count: metadata.referral_count || "0",
+        new_participant_name: metadata.new_participant_name || "",
+        referrer_sequence: metadata.referrer_sequence || "0",
       };
 
       console.log(
@@ -130,7 +137,9 @@ async function retryFailedNotifications(results: any) {
 
       if (result.success) {
         results.failed_retries++;
-        console.log(`[AUTOMATION] Successfully retried notification ${notificationId}`);
+        console.log(
+          `[AUTOMATION] Successfully retried notification ${notificationId}`
+        );
       } else {
         results.errors.push(
           `Retry failed for ${notification.type} to ${notification.target_phone}: ${result.error}`
@@ -170,7 +179,7 @@ async function processPendingWelcomeMessages(
       const registeredAt = new Date(participant.registered_at);
       if (registeredAt > cutoffTime) continue;
 
-      // Check if welcome message already sent
+      // Check if welcome message already sent (ignore pending status)
       const notificationsRef = collection(db, "notifications_log");
       const notificationQuery = query(
         notificationsRef,
@@ -179,12 +188,23 @@ async function processPendingWelcomeMessages(
       );
       const existingNotifications = await getDocs(notificationQuery);
 
-      if (!existingNotifications.empty) continue;
+      // Check if there's a non-pending notification (success or failed)
+      const hasSentNotification = existingNotifications.docs.some(
+        (doc) => doc.data().status !== "pending"
+      );
+
+      if (hasSentNotification) continue;
 
       // Send welcome message
       console.log(
         `[AUTOMATION] Sending welcome message to ${participant.name}`
       );
+
+      // Find pending notification if exists
+      const pendingNotification = existingNotifications.docs.find(
+        (doc) => doc.data().status === "pending"
+      );
+
       const result = await sendWhatsAppMessage(
         participant.phone,
         "welcome",
@@ -192,10 +212,20 @@ async function processPendingWelcomeMessages(
           sapaan: participant.sapaan,
           name: participant.name,
           city: participant.city,
-          referral_code: participant.referral_code,
+          referral_code: `${
+            process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.com"
+          }?ref=${participant.referral_code}`,
         },
         participantId
       );
+
+      // If there was a pending notification, delete it (sendWhatsAppMessage creates a new one)
+      if (pendingNotification) {
+        await deleteDoc(doc(db, "notifications_log", pendingNotification.id));
+        console.log(
+          `[AUTOMATION] Deleted pending notification for ${participant.name}`
+        );
+      }
 
       if (result.success) {
         results.welcome_messages_sent++;
@@ -220,67 +250,90 @@ async function processPendingReferrerAlerts(
   results: any
 ) {
   try {
-    const participantsRef = collection(db, "participants");
+    const notificationsRef = collection(db, "notifications_log");
+    const now = new Date();
 
-    // Get all participants who were referred
-    const referredQuery = query(
-      participantsRef,
-      where("referrer_phone", "!=", null)
+    // Query for pending referrer alerts
+    const pendingQuery = query(
+      notificationsRef,
+      where("type", "==", "referrer_alert"),
+      where("status", "==", "pending")
     );
-    const referredSnap = await getDocs(referredQuery);
+    const pendingSnap = await getDocs(pendingQuery);
 
-    for (const referredDoc of referredSnap.docs) {
-      const referred = referredDoc.data();
-      const referredId = referredDoc.id;
+    console.log(
+      `[AUTOMATION] Found ${pendingSnap.size} pending referrer alerts`
+    );
 
-      // Check if registered_at exists
-      if (!referred.registered_at) continue;
+    for (const pendingDoc of pendingSnap.docs) {
+      const notification = pendingDoc.data();
+      const createdAt = new Date(notification.created_at);
+      const minutesSinceCreated =
+        (now.getTime() - createdAt.getTime()) / 1000 / 60;
 
-      // Check if referrer alert already sent for this referral
-      const notificationsRef = collection(db, "notifications_log");
-      const notificationQuery = query(
-        notificationsRef,
-        where("participant_id", "==", referredId),
-        where("type", "==", "referrer_alert")
-      );
-      const existingNotifications = await getDocs(notificationQuery);
+      // Check if enough time has passed
+      if (minutesSinceCreated < delayMinutes) {
+        console.log(
+          `[AUTOMATION] Skipping referrer alert - only ${Math.floor(
+            minutesSinceCreated
+          )} minutes passed (need ${delayMinutes})`
+        );
+        continue;
+      }
 
-      if (!existingNotifications.empty) continue;
+      const targetPhone = notification.target_phone;
+      const metadata = notification.metadata || {};
+      const newParticipantName = metadata.new_participant_name || "Unknown";
+      const referrerSequence = metadata.referrer_sequence || 1;
 
-      // Find the referrer
+      // Get referrer information
+      const participantsRef = collection(db, "participants");
       const referrerQuery = query(
         participantsRef,
-        where("phone", "==", referred.referrer_phone)
+        where("phone", "==", targetPhone)
       );
       const referrerSnap = await getDocs(referrerQuery);
 
-      if (referrerSnap.empty) continue;
+      if (referrerSnap.empty) {
+        console.log(`[AUTOMATION] Referrer not found for phone ${targetPhone}`);
+        // Delete invalid pending notification
+        await deleteDoc(doc(db, "notifications_log", pendingDoc.id));
+        continue;
+      }
 
-      const referrerDoc = referrerSnap.docs[0];
-      const referrer = referrerDoc.data();
-      const referrerId = referrerDoc.id;
+      const referrer = referrerSnap.docs[0].data();
+      const referrerId = referrerSnap.docs[0].id;
 
-      // Count total referrals
+      // Count total successful referrals
       const referralsQuery = query(
         participantsRef,
-        where("referrer_phone", "==", referrer.phone)
+        where("referrer_phone", "==", targetPhone)
       );
       const referralsSnap = await getDocs(referralsQuery);
       const referralCount = referralsSnap.size;
 
       // Send referrer alert
       console.log(
-        `[AUTOMATION] Sending referrer alert to ${referrer.name} (${referralCount} referrals)`
+        `[AUTOMATION] Sending referrer alert to ${referrer.name} (${referralCount} total referrals, new: ${newParticipantName})`
       );
+
       const result = await sendWhatsAppMessage(
-        referrer.phone,
+        targetPhone,
         "referrer_alert",
         {
           sapaan: referrer.sapaan,
           name: referrer.name,
           referral_count: referralCount.toString(),
+          new_participant_name: newParticipantName,
+          referrer_sequence: referrerSequence.toString(),
         },
-        referredId // Use referred ID to mark this specific referral as notified
+        notification.participant_id
+      );
+
+      // Delete the pending notification (sendWhatsAppMessage creates a new one)
+      await deleteDoc(doc(db, "notifications_log", pendingDoc.id));
+      console.log(
+        `[AUTOMATION] Deleted pending referrer alert for ${referrer.name}`
       );
 
       if (result.success) {
@@ -326,7 +379,7 @@ async function processEventReminders(hoursBefore: number, results: any) {
 
       if (timeDiff < lowerBound || timeDiff > upperBound) continue;
 
-      // Check if reminder already sent for this event
+      // Check if reminder already sent for this event (ignore pending)
       const notificationsRef = collection(db, "notifications_log");
       const notificationQuery = query(
         notificationsRef,
@@ -335,7 +388,12 @@ async function processEventReminders(hoursBefore: number, results: any) {
       );
       const existingNotifications = await getDocs(notificationQuery);
 
-      if (!existingNotifications.empty) continue;
+      // Check if there's a non-pending notification
+      const hasSentNotification = existingNotifications.docs.some(
+        (doc) => doc.data().status !== "pending"
+      );
+
+      if (hasSentNotification) continue;
 
       // Get all participants
       const participantsRef = collection(db, "participants");

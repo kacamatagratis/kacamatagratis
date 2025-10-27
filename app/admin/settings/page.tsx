@@ -156,8 +156,13 @@ export default function SettingsPage() {
             name: "Welcome Message",
             type: "welcome",
             content:
-              "Halo {sapaan} {name}! 👋\n\nTerima kasih sudah mendaftar di Kacamata Gratis dari {city}.\n\nKode referral Anda: {referral_code}\n\nBagikan kode ini untuk mengajak teman!",
-            variables: ["sapaan", "name", "city", "referral_code"],
+              "Halo {sapaan} {name}! 👋\n\nTerima kasih sudah mendaftar di Kacamata Gratis dari {city}.\n\n🔗 Link Referral Anda:\n{referral_code}\n\nBagikan link di atas untuk mengajak teman!",
+            variables: [
+              "sapaan",
+              "name",
+              "city",
+              "referral_code",
+            ],
           },
           {
             name: "Referrer Alert",
@@ -475,7 +480,7 @@ export default function SettingsPage() {
                                 <code className="bg-blue-100 px-2 py-0.5 rounded">
                                   {"{referral_code}"}
                                 </code>{" "}
-                                - Unique referral code for sharing
+                                - Full referral URL to share
                               </p>
                             </>
                           )}
@@ -498,6 +503,20 @@ export default function SettingsPage() {
                                   {"{referral_count}"}
                                 </code>{" "}
                                 - Total number of successful referrals
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{new_participant_name}"}
+                                </code>{" "}
+                                - Name of the new participant who just
+                                registered
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{referrer_sequence}"}
+                                </code>{" "}
+                                - Order number of this referral (1st, 2nd, 3rd,
+                                etc.)
                               </p>
                             </>
                           )}
@@ -608,7 +627,7 @@ export default function SettingsPage() {
                                 <code className="bg-blue-100 px-2 py-0.5 rounded">
                                   {"{referral_code}"}
                                 </code>{" "}
-                                - Unique referral code
+                                - Full referral URL to share
                               </p>
                             </>
                           )}
@@ -631,6 +650,18 @@ export default function SettingsPage() {
                                   {"{referral_count}"}
                                 </code>{" "}
                                 - Total referrals
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{new_participant_name}"}
+                                </code>{" "}
+                                - New participant's name
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{referrer_sequence}"}
+                                </code>{" "}
+                                - Referral order number
                               </p>
                             </>
                           )}
@@ -860,7 +891,11 @@ export default function SettingsPage() {
                           )}
                           {key.health_checked_at && (
                             <span className="text-xs text-gray-400">
-                              ({new Date(key.health_checked_at).toLocaleTimeString()})
+                              (
+                              {new Date(
+                                key.health_checked_at
+                              ).toLocaleTimeString()}
+                              )
                             </span>
                           )}
                         </div>

@@ -105,11 +105,32 @@ export async function POST(request: NextRequest) {
     // Generate referral URL
     const referralUrl = `${
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    }/ref=${participantData.referral_code}`;
+    }?ref=${participantData.referral_code}`;
 
-    // TODO: Trigger WhatsApp notifications
-    // - Send welcome message to participant
-    // - Send alert to referrer if exists
+    // Create pending referrer alert notification if there's a referrer
+    if (referrerPhone) {
+      try {
+        await addDoc(collection(db, "notifications_log"), {
+          participant_id: docRef.id,
+          target_phone: referrerPhone,
+          type: "referrer_alert",
+          api_key_used: null,
+          status: "pending",
+          message_content: null,
+          error: null,
+          event_id: null,
+          created_at: new Date().toISOString(),
+          metadata: {
+            ...participantData,
+            new_participant_name: name,
+            new_participant_city: city,
+            referrer_sequence: referrerSequence,
+          },
+        });
+      } catch (err) {
+        console.error("Failed to create pending referrer alert:", err);
+      }
+    }
 
     return NextResponse.json({
       success: true,

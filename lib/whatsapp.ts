@@ -140,6 +140,27 @@ async function logNotification(
 }
 
 /**
+ * Format phone number for DripSender API
+ * Converts +62xxx or 0xxx to 62xxx format
+ */
+function formatPhoneForDripSender(phone: string): string {
+  // Remove all spaces, dashes, and plus signs
+  let formatted = phone.replace(/[\s\-+]/g, "");
+
+  // If starts with 0, replace with 62
+  if (formatted.startsWith("0")) {
+    formatted = "62" + formatted.substring(1);
+  }
+
+  // Ensure it starts with 62
+  if (!formatted.startsWith("62")) {
+    formatted = "62" + formatted;
+  }
+
+  return formatted;
+}
+
+/**
  * Send WhatsApp message via DripSender with random API key
  */
 export async function sendWhatsAppMessage(
@@ -154,6 +175,10 @@ export async function sendWhatsAppMessage(
   apiKeyUsed?: string;
 }> {
   try {
+    // Format phone number for DripSender (remove + and ensure 62xxx format)
+    const formattedPhone = formatPhoneForDripSender(phone);
+    console.log(`[WhatsApp] Formatting phone: ${phone} -> ${formattedPhone}`);
+
     // Get random active API key
     const apiKey = await getRandomApiKey();
     if (!apiKey) {
@@ -183,7 +208,7 @@ export async function sendWhatsAppMessage(
       },
       body: JSON.stringify({
         api_key: apiKey.api_key,
-        phone: phone,
+        phone: formattedPhone,
         text: message,
       }),
     });
@@ -193,10 +218,19 @@ export async function sendWhatsAppMessage(
 
     if (!isSuccess) {
       try {
-        const errorData = await response.json();
-        errorDetail = `HTTP ${response.status}: ${
-          errorData.message || errorData.error || JSON.stringify(errorData)
-        }`;
+        // Check content type before parsing
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          errorDetail = `HTTP ${response.status}: ${
+            errorData.message || errorData.error || JSON.stringify(errorData)
+          }`;
+        } else {
+          const textError = await response.text();
+          errorDetail = `HTTP ${response.status}: ${
+            textError || response.statusText
+          }`;
+        }
       } catch {
         errorDetail = `HTTP ${response.status}: ${response.statusText}`;
       }
@@ -238,7 +272,7 @@ export async function sendWhatsAppMessage(
           },
           body: JSON.stringify({
             api_key: retryKey.api_key,
-            phone: phone,
+            phone: formattedPhone,
             text: message,
           }),
         });
@@ -294,6 +328,12 @@ export async function sendWhatsAppMessageWithMedia(
   apiKeyUsed?: string;
 }> {
   try {
+    // Format phone number for DripSender
+    const formattedPhone = formatPhoneForDripSender(phone);
+    console.log(
+      `[WhatsApp Media] Formatting phone: ${phone} -> ${formattedPhone}`
+    );
+
     const apiKey = await getRandomApiKey();
     if (!apiKey) {
       return {
@@ -319,7 +359,7 @@ export async function sendWhatsAppMessageWithMedia(
       },
       body: JSON.stringify({
         api_key: apiKey.api_key,
-        phone: phone,
+        phone: formattedPhone,
         text: message,
         media_url: mediaUrl,
       }),
