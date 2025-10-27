@@ -46,7 +46,7 @@ export default function RegistrationForm() {
       if (response.ok) {
         setSuccess(true);
 
-        // Fetch general settings for WhatsApp redirect number
+        // Fetch general settings for WhatsApp redirect number and message template
         const settingsResponse = await fetch("/api/general-settings");
         const settingsData = await settingsResponse.json();
 
@@ -54,11 +54,18 @@ export default function RegistrationForm() {
           ? settingsData.whatsapp_redirect_number.replace(/[^0-9]/g, "") // Remove formatting
           : "6281517800900"; // Default fallback
 
+        const messageTemplate =
+          settingsData.whatsapp_message_template ||
+          "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!";
+
+        // Replace variables in template
+        const personalizedMessage = messageTemplate
+          .replace("{name}", formData.name)
+          .replace("{city}", formData.city);
+
         // Redirect to WhatsApp after 2 seconds
         setTimeout(() => {
-          const message = encodeURIComponent(
-            `Halo Admin, saya ${formData.name} dari ${formData.city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!`
-          );
+          const message = encodeURIComponent(personalizedMessage);
           window.location.href = `https://wa.me/${adminPhone}?text=${message}`;
         }, 2000);
       } else {

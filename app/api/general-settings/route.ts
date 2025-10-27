@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         whatsapp_redirect_number: "+62 815-1780-0900",
         referral_domain: "www.kacamatagratis.org",
+        whatsapp_message_template:
+          "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!",
       });
     }
   } catch (error) {

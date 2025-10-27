@@ -41,6 +41,15 @@ async function runAutomation() {
     };
   }
 
+  // Load general settings for referral domain
+  const generalSettingsRef = doc(db, "general_settings", "config");
+  const generalSettingsDoc = await getDoc(generalSettingsRef);
+  const referralDomain = generalSettingsDoc.exists()
+    ? generalSettingsDoc.data()?.referral_domain || "www.kacamatagratis.org"
+    : "www.kacamatagratis.org";
+
+  console.log(`[AUTOMATION] Using referral domain: ${referralDomain}`);
+
   const results = {
     welcome_messages_sent: 0,
     referrer_alerts_sent: 0,
@@ -50,12 +59,13 @@ async function runAutomation() {
   };
 
   // First, retry any failed notifications
-  await retryFailedNotifications(results);
+  await retryFailedNotifications(results, referralDomain);
 
   // Check for pending welcome messages (default: 2 minutes)
   await processPendingWelcomeMessages(
     settings.welcome_delay_minutes || 2,
-    results
+    results,
+    referralDomain
   );
 
   // Check for pending referrer alerts (default: 0 minutes = instant)
@@ -95,7 +105,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function retryFailedNotifications(results: any) {
+async function retryFailedNotifications(results: any, referralDomain: string) {
   try {
     const notificationsRef = collection(db, "notifications_log");
 
@@ -122,9 +132,7 @@ async function retryFailedNotifications(results: any) {
         name: metadata.name || "",
         city: metadata.city || "",
         referral_code: metadata.referral_code
-          ? `${
-              process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.com"
-            }?ref=${metadata.referral_code}`
+          ? `https://${referralDomain}?ref=${metadata.referral_code}`
           : "",
         event_title: metadata.event_title || "",
         zoom_link: metadata.zoom_link || "",
@@ -169,7 +177,8 @@ async function retryFailedNotifications(results: any) {
 
 async function processPendingWelcomeMessages(
   delayMinutes: number,
-  results: any
+  results: any,
+  referralDomain: string
 ) {
   try {
     const notificationsRef = collection(db, "notifications_log");
@@ -242,9 +251,7 @@ async function processPendingWelcomeMessages(
           name: participantName,
           city: participantCity,
           referral_code: referralCode
-            ? `${
-                process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.com"
-              }?ref=${referralCode}`
+            ? `https://${referralDomain}?ref=${referralCode}`
             : "",
         },
         participantId

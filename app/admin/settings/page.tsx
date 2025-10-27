@@ -63,6 +63,7 @@ interface AutomationSettings {
 interface GeneralSettings {
   whatsapp_redirect_number: string;
   referral_domain: string;
+  whatsapp_message_template: string;
 }
 
 export default function SettingsPage() {
@@ -78,6 +79,8 @@ export default function SettingsPage() {
   const [generalSettings, setGeneralSettings] = useState<GeneralSettings>({
     whatsapp_redirect_number: "+62 815-1780-0900",
     referral_domain: "www.kacamatagratis.org",
+    whatsapp_message_template:
+      "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!",
   });
 
   // Automation settings
@@ -106,6 +109,8 @@ export default function SettingsPage() {
       const defaultSettings: GeneralSettings = {
         whatsapp_redirect_number: "+62 815-1780-0900",
         referral_domain: "www.kacamatagratis.org",
+        whatsapp_message_template:
+          "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!",
       };
 
       if (settingsDoc.exists()) {
@@ -116,6 +121,9 @@ export default function SettingsPage() {
             defaultSettings.whatsapp_redirect_number,
           referral_domain:
             data.referral_domain ?? defaultSettings.referral_domain,
+          whatsapp_message_template:
+            data.whatsapp_message_template ??
+            defaultSettings.whatsapp_message_template,
         };
         setGeneralSettings(mergedSettings);
       } else {
@@ -1376,6 +1384,54 @@ export default function SettingsPage() {
                 <p className="text-xs text-blue-600 mt-1">
                   Example referral link: https://
                   {generalSettings.referral_domain}?ref=6281234567890
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* WhatsApp Message Template */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <MessageSquare className="w-6 h-6 text-blue-600 shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  WhatsApp Message Template
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Customize the pre-filled message that users will send when
+                  redirected to WhatsApp. Available variables: {"{name}"},{" "}
+                  {"{city}"}
+                </p>
+
+                <div className="flex flex-col gap-4">
+                  <textarea
+                    value={generalSettings.whatsapp_message_template}
+                    onChange={(e) =>
+                      setGeneralSettings({
+                        ...generalSettings,
+                        whatsapp_message_template: e.target.value,
+                      })
+                    }
+                    placeholder="Halo Admin, saya {name} dari {city} sudah mendaftar..."
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-xs font-medium text-blue-900 mb-2">
+                    Preview:
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    {generalSettings.whatsapp_message_template
+                      .replace("{name}", "John Doe")
+                      .replace("{city}", "Jakarta")}
+                  </p>
+                </div>
+
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Tip: Use {"{name}"} and {"{city}"} to personalize the
+                  message with the participant's information.
                 </p>
               </div>
             </div>
