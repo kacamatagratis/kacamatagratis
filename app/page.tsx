@@ -487,7 +487,13 @@ function HomeContent() {
                     "from-purple-600 to-purple-700",
                   ];
                   const Icon = icons[index % icons.length];
-                  const whatsappUrl = `https://wa.me/${role.whatsapp_number.replace(
+                  // Use ref param as WhatsApp number if present, else default
+                  const refParam = searchParams.get("ref");
+                  const whatsappNumber =
+                    refParam && /^\d{8,15}$/.test(refParam)
+                      ? refParam
+                      : "085212630895";
+                  const whatsappUrl = `https://wa.me/${whatsappNumber.replace(
                     /\D/g,
                     ""
                   )}?text=${encodeURIComponent(role.whatsapp_message)}`;
@@ -837,7 +843,6 @@ function HomeContent() {
       </footer>
     </div>
   );
-
 }
 
 export default function Home() {
