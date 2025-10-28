@@ -100,6 +100,14 @@ export default function ParticipantsPage() {
     }
   };
 
+  // Get invitor details by phone number
+  const getInvitorDetails = (referrerPhone: string | null) => {
+    if (!referrerPhone) return null;
+    // referrer_phone is actually the referral_code of the invitor
+    const invitor = participants.find((p) => p.referral_code === referrerPhone);
+    return invitor;
+  };
+
   // Helper function to normalize phone numbers for comparison
   const normalizePhone = (phone: string | null) => {
     if (!phone) return null;
@@ -193,24 +201,31 @@ export default function ParticipantsPage() {
       "Profesi",
       "Nomor WhatsApp",
       "Kode Referral",
+      "Pengundang",
       "Referrer Phone",
       "Urutan Referral",
       "Tanggal Daftar",
       "Status",
     ];
 
-    const csvData = filteredParticipants.map((p) => [
-      p.sapaan,
-      p.name,
-      p.city,
-      p.profession,
-      p.phone,
-      p.referral_code,
-      p.referrer_phone || "-",
-      p.referrer_sequence,
-      new Date(p.registered_at).toLocaleString("id-ID"),
-      p.status,
-    ]);
+    const csvData = filteredParticipants.map((p) => {
+      const invitor = getInvitorDetails(p.referrer_phone);
+      const invitorInfo = invitor ? `${invitor.name}\n${invitor.phone}` : "-";
+
+      return [
+        p.sapaan,
+        p.name,
+        p.city,
+        p.profession,
+        p.phone,
+        p.referral_code,
+        invitorInfo,
+        p.referrer_phone || "-",
+        p.referrer_sequence,
+        new Date(p.registered_at).toLocaleString("id-ID"),
+        p.status,
+      ];
+    });
 
     const csvContent = [
       headers.join(","),
@@ -345,6 +360,9 @@ export default function ParticipantsPage() {
                   Referrals
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Pengundang
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Registered
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -358,83 +376,101 @@ export default function ParticipantsPage() {
             <tbody className="divide-y divide-gray-200">
               {currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center">
+                  <td colSpan={8} className="px-6 py-8 text-center">
                     <p className="text-gray-500">No participants found</p>
                   </td>
                 </tr>
               ) : (
-                currentItems.map((participant) => (
-                  <tr key={participant.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {participant.sapaan} {participant.name}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {participant.profession}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {participant.city}
-                    </td>
-                    <td className="px-6 py-4">
-                      <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                        {participant.phone}
-                      </code>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center gap-1 text-sm text-gray-600">
-                        <Share2 className="w-4 h-4" />
-                        {getReferralCount(participant.phone)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {new Date(participant.registered_at).toLocaleDateString(
-                        "id-ID"
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          participant.status === "sudah_join"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}
-                      >
-                        {participant.status === "sudah_join"
-                          ? "Sudah Join"
-                          : "New Lead"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedParticipant(participant);
-                            setShowModal(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-700 p-1 hover:bg-blue-50 rounded transition-colors"
-                          title="View Details"
+                currentItems.map((participant) => {
+                  const invitor = getInvitorDetails(participant.referrer_phone);
+
+                  return (
+                    <tr key={participant.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {participant.sapaan} {participant.name}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {participant.profession}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {participant.city}
+                      </td>
+                      <td className="px-6 py-4">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                          {participant.phone}
+                        </code>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 text-sm text-gray-600">
+                          <Share2 className="w-4 h-4" />
+                          {getReferralCount(participant.phone)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {invitor ? (
+                          <div className="text-sm">
+                            <p className="font-medium text-gray-900">
+                              {invitor.name}
+                            </p>
+                            <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                              {invitor.phone}
+                            </code>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {new Date(participant.registered_at).toLocaleDateString(
+                          "id-ID"
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            participant.status === "sudah_join"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}
                         >
-                          <Eye className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() =>
-                            deleteParticipant(
-                              participant.id,
-                              `${participant.sapaan} ${participant.name}`
-                            )
-                          }
-                          className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
-                          title="Delete Participant"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {participant.status === "sudah_join"
+                            ? "Sudah Join"
+                            : "New Lead"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedParticipant(participant);
+                              setShowModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-700 p-1 hover:bg-blue-50 rounded transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() =>
+                              deleteParticipant(
+                                participant.id,
+                                `${participant.sapaan} ${participant.name}`
+                              )
+                            }
+                            className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                            title="Delete Participant"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -546,12 +582,32 @@ export default function ParticipantsPage() {
                     </p>
                   </div>
                   {selectedParticipant.referrer_phone && (
-                    <div className="col-span-2">
-                      <p className="text-sm text-gray-500">Referred By</p>
-                      <p className="font-medium text-gray-900">
-                        {selectedParticipant.referrer_phone}
-                      </p>
-                    </div>
+                    <>
+                      <div className="col-span-2">
+                        <p className="text-sm text-gray-500">
+                          Pengundang (Invitor)
+                        </p>
+                        {(() => {
+                          const invitor = getInvitorDetails(
+                            selectedParticipant.referrer_phone
+                          );
+                          return invitor ? (
+                            <div className="mt-1 p-3 bg-gray-50 rounded-lg">
+                              <p className="font-medium text-gray-900">
+                                {invitor.name}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {invitor.phone}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="font-medium text-gray-900">
+                              {selectedParticipant.referrer_phone}
+                            </p>
+                          );
+                        })()}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
