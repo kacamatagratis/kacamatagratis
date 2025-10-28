@@ -11,6 +11,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import RegistrationForm from "@/components/RegistrationForm";
 import LatestEvent from "@/components/LatestEvent";
@@ -90,12 +91,14 @@ interface LandingPageData {
 }
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const [isVisible, setIsVisible] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [hasEvent, setHasEvent] = useState(false);
   const [landingData, setLandingData] = useState<LandingPageData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSimpleMode, setIsSimpleMode] = useState(false);
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -104,6 +107,10 @@ export default function Home() {
   });
 
   useEffect(() => {
+    // Check for mod=simple parameter
+    const mod = searchParams.get("mod");
+    setIsSimpleMode(mod === "simple");
+
     setIsVisible(true);
 
     const handleScroll = () => {
@@ -175,28 +182,30 @@ export default function Home() {
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
-  }, []);
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-indigo-50">
       {/* Scroll Progress Indicator */}
-      <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-100">
-        <div
-          className="h-full bg-linear-to-r from-green-500 to-blue-600 transition-all duration-300"
-          style={{
-            width:
-              typeof window !== "undefined"
-                ? `${Math.min(
-                    (scrollY /
-                      (document.documentElement.scrollHeight -
-                        window.innerHeight)) *
-                      100,
-                    100
-                  )}%`
-                : "0%",
-          }}
-        />
-      </div>
+      {!isSimpleMode && (
+        <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-100">
+          <div
+            className="h-full bg-linear-to-r from-green-500 to-blue-600 transition-all duration-300"
+            style={{
+              width:
+                typeof window !== "undefined"
+                  ? `${Math.min(
+                      (scrollY /
+                        (document.documentElement.scrollHeight -
+                          window.innerHeight)) *
+                        100,
+                      100
+                    )}%`
+                  : "0%",
+            }}
+          />
+        </div>
+      )}
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
@@ -208,12 +217,14 @@ export default function Home() {
               className="h-12 sm:h-14 lg:h-16 w-auto object-contain"
             />
           </div>
-          <a
-            href="#zoom"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium text-sm sm:text-base transition-all duration-300 hover:shadow-lg hover:scale-105 min-h-11 flex items-center justify-center"
-          >
-            Ikuti Zoom Sekarang
-          </a>
+          {!isSimpleMode && (
+            <a
+              href="#zoom"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium text-sm sm:text-base transition-all duration-300 hover:shadow-lg hover:scale-105 min-h-11 flex items-center justify-center"
+            >
+              Ikuti Zoom Sekarang
+            </a>
+          )}
         </div>
       </header>
 
@@ -279,7 +290,7 @@ export default function Home() {
       </section>
 
       {/* Value Proposition - Before & After */}
-      {landingData?.value_proposition && (
+      {!isSimpleMode && landingData?.value_proposition && (
         <section className="py-16 sm:py-24 bg-linear-to-br from-indigo-50 via-blue-50 to-purple-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-6xl mx-auto">
@@ -343,7 +354,7 @@ export default function Home() {
       )}
 
       {/* Why Section */}
-      {landingData?.why_section && (
+      {!isSimpleMode && landingData?.why_section && (
         <section className="bg-white py-16 sm:py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
@@ -384,7 +395,7 @@ export default function Home() {
       )}
 
       {/* Statistics Section */}
-      {landingData?.statistics && (
+      {!isSimpleMode && landingData?.statistics && (
         <section className="bg-linear-to-br from-green-50 to-blue-50 py-16 sm:py-20">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl mx-auto">
@@ -418,7 +429,7 @@ export default function Home() {
       )}
 
       {/* Program Section */}
-      {landingData?.program && (
+      {!isSimpleMode && landingData?.program && (
         <section className="py-16 sm:py-24 bg-linear-to-br from-gray-50 to-blue-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-6xl mx-auto">
@@ -460,7 +471,7 @@ export default function Home() {
       )}
 
       {/* Roles Section */}
-      {landingData?.roles && (
+      {!isSimpleMode && landingData?.roles && (
         <section className="py-16 sm:py-24 bg-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl mx-auto">
@@ -523,77 +534,79 @@ export default function Home() {
       )}
 
       {/* Testimonials */}
-      {landingData?.testimonials && landingData.testimonials.length > 0 && (
-        <section className="py-16 sm:py-24 bg-linear-to-br from-indigo-50 to-blue-50">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-5xl mx-auto">
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-12 text-center">
-                Kisah dari Mereka yang Kini Bisa Melihat Lagi
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-6 sm:gap-8">
-                {landingData.testimonials.map((testimonial, index) => {
-                  const gradients = [
-                    "from-blue-500 to-indigo-500",
-                    "from-purple-500 to-pink-500",
-                    "from-green-500 to-teal-500",
-                    "from-orange-500 to-red-500",
-                  ];
-                  const initials = testimonial.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2);
+      {!isSimpleMode &&
+        landingData?.testimonials &&
+        landingData.testimonials.length > 0 && (
+          <section className="py-16 sm:py-24 bg-linear-to-br from-indigo-50 to-blue-50">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="max-w-5xl mx-auto">
+                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-12 text-center">
+                  Kisah dari Mereka yang Kini Bisa Melihat Lagi
+                </h2>
+                <div className="grid sm:grid-cols-2 gap-6 sm:gap-8">
+                  {landingData.testimonials.map((testimonial, index) => {
+                    const gradients = [
+                      "from-blue-500 to-indigo-500",
+                      "from-purple-500 to-pink-500",
+                      "from-green-500 to-teal-500",
+                      "from-orange-500 to-red-500",
+                    ];
+                    const initials = testimonial.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
 
-                  return (
-                    <div
-                      key={testimonial.id}
-                      className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 group"
-                    >
-                      <div className="flex items-center gap-2 mb-4">
-                        {[...Array(5)].map((_, i) => (
-                          <Heart
-                            key={i}
-                            className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 group-hover:scale-110 ${
-                              i < testimonial.rating
-                                ? "text-yellow-400 fill-yellow-400"
-                                : "text-gray-300"
-                            }`}
-                            style={{ transitionDelay: `${i * 50}ms` }}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-gray-700 mb-6 italic text-sm sm:text-base leading-relaxed">
-                        &ldquo;{testimonial.text}&rdquo;
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-10 h-10 sm:w-12 sm:h-12 bg-linear-to-br ${
-                            gradients[index % gradients.length]
-                          } rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base`}
-                        >
-                          {initials}
+                    return (
+                      <div
+                        key={testimonial.id}
+                        className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 group"
+                      >
+                        <div className="flex items-center gap-2 mb-4">
+                          {[...Array(5)].map((_, i) => (
+                            <Heart
+                              key={i}
+                              className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 group-hover:scale-110 ${
+                                i < testimonial.rating
+                                  ? "text-yellow-400 fill-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                              style={{ transitionDelay: `${i * 50}ms` }}
+                            />
+                          ))}
                         </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 text-sm sm:text-base">
-                            {testimonial.name}
-                          </p>
-                          <p className="text-gray-500 text-xs sm:text-sm">
-                            {testimonial.location}
-                          </p>
+                        <p className="text-gray-700 mb-6 italic text-sm sm:text-base leading-relaxed">
+                          &ldquo;{testimonial.text}&rdquo;
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-10 h-10 sm:w-12 sm:h-12 bg-linear-to-br ${
+                              gradients[index % gradients.length]
+                            } rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base`}
+                          >
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm sm:text-base">
+                              {testimonial.name}
+                            </p>
+                            <p className="text-gray-500 text-xs sm:text-sm">
+                              {testimonial.location}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
       {/* FAQ Section */}
-      {landingData?.faq && landingData.faq.length > 0 && (
+      {!isSimpleMode && landingData?.faq && landingData.faq.length > 0 && (
         <section className="py-16 sm:py-24 bg-gray-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
@@ -645,77 +658,81 @@ export default function Home() {
       )}
 
       {/* Media Coverage Section */}
-      {landingData?.media_coverage && landingData.media_coverage.length > 0 && (
-        <section className="py-16 sm:py-24 bg-white">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-12 sm:mb-16">
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-                  Liputan Media & Kegiatan di Seluruh Indonesia
-                </h2>
-                <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
-                  Program MGI telah tersebar di berbagai kota dan mendapat
-                  liputan dari berbagai media. Berikut beberapa kegiatan yang
-                  telah dilaksanakan:
-                </p>
-              </div>
+      {!isSimpleMode &&
+        landingData?.media_coverage &&
+        landingData.media_coverage.length > 0 && (
+          <section className="py-16 sm:py-24 bg-white">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-12 sm:mb-16">
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+                    Liputan Media & Kegiatan di Seluruh Indonesia
+                  </h2>
+                  <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
+                    Program MGI telah tersebar di berbagai kota dan mendapat
+                    liputan dari berbagai media. Berikut beberapa kegiatan yang
+                    telah dilaksanakan:
+                  </p>
+                </div>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {landingData.media_coverage.map((news) => (
-                  <div
-                    key={news.id}
-                    className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-6 hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group border border-blue-100"
-                  >
-                    {news.image_url && (
-                      <div className="mb-4 rounded-lg overflow-hidden">
-                        <img
-                          src={news.image_url}
-                          alt={news.title}
-                          className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      </div>
-                    )}
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
-                        {news.location}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors line-clamp-2">
-                      {news.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-4">{news.source}</p>
-                    <a
-                      href={news.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-sm group-hover:gap-3 transition-all"
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {landingData.media_coverage.map((news) => (
+                    <div
+                      key={news.id}
+                      className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-6 hover:shadow-xl transition-all duration-500 hover:-translate-y-2 group border border-blue-100"
                     >
-                      Baca Selengkapnya
-                      <ArrowRight className="w-4 h-4" />
-                    </a>
-                  </div>
-                ))}
-              </div>
+                      {news.image_url && (
+                        <div className="mb-4 rounded-lg overflow-hidden">
+                          <img
+                            src={news.image_url}
+                            alt={news.title}
+                            className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-start justify-between mb-3">
+                        <span className="inline-block px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
+                          {news.location}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors line-clamp-2">
+                        {news.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        {news.source}
+                      </p>
+                      <a
+                        href={news.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold text-sm group-hover:gap-3 transition-all"
+                      >
+                        Baca Selengkapnya
+                        <ArrowRight className="w-4 h-4" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
 
-              <div className="mt-12 text-center">
-                <p className="text-gray-600 text-lg mb-6">
-                  <strong className="text-gray-900">50+ Kota</strong> di seluruh
-                  Indonesia telah merasakan manfaat program ini
-                </p>
-                <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-100 to-blue-100 px-6 py-3 rounded-full">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span className="font-semibold text-gray-900">
-                    Program Terpercaya & Tersebar Nasional
-                  </span>
+                <div className="mt-12 text-center">
+                  <p className="text-gray-600 text-lg mb-6">
+                    <strong className="text-gray-900">50+ Kota</strong> di
+                    seluruh Indonesia telah merasakan manfaat program ini
+                  </p>
+                  <div className="inline-flex items-center gap-2 bg-linear-to-r from-green-100 to-blue-100 px-6 py-3 rounded-full">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="font-semibold text-gray-900">
+                      Program Terpercaya & Tersebar Nasional
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
 
       {/* Countdown Timer - Only show if there's an upcoming event */}
-      {hasEvent && (
+      {!isSimpleMode && hasEvent && (
         <section className="py-12 sm:py-16 bg-linear-to-r from-green-600 to-emerald-600 text-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
@@ -766,11 +783,13 @@ export default function Home() {
       )}
 
       {/* Latest Event Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <LatestEvent />
-        </div>
-      </section>
+      {!isSimpleMode && (
+        <section className="py-16 bg-white">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <LatestEvent />
+          </div>
+        </section>
+      )}
 
       {/* Registration Form Section */}
       <section className="py-16 sm:py-24 bg-linear-to-br from-blue-600 to-indigo-700">
