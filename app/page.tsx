@@ -492,7 +492,7 @@ function HomeContent() {
                   const whatsappNumber =
                     refParam && /^\d{8,15}$/.test(refParam)
                       ? refParam
-                      : "085212630895";
+                      : "6285212630895";
                   const whatsappUrl = `https://wa.me/${whatsappNumber.replace(
                     /\D/g,
                     ""
