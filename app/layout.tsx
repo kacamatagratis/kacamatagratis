@@ -50,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="id" className={inter.variable}>
       <head>
-        <link rel="icon" href="/logo.png" />
+        <link rel="icon" href="/icon.jpg" />
       </head>
       <body className={`${inter.className} antialiased`}>{children}</body>
     </html>
