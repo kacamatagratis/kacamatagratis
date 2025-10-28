@@ -90,7 +90,7 @@ interface LandingPageData {
   }>;
 }
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const [isVisible, setIsVisible] = useState(false);
   const [scrollY, setScrollY] = useState(0);
@@ -836,5 +836,14 @@ export default function Home() {
         </div>
       </footer>
     </div>
+  );
+
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
