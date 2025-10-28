@@ -1,0 +1,37 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { stats } = body;
+
+    if (!stats || !Array.isArray(stats)) {
+      return NextResponse.json(
+        { success: false, error: "Stats array is required" },
+        { status: 400 }
+      );
+    }
+
+    const ref = doc(db, "landing_page_settings", "statistics");
+    await setDoc(ref, {
+      stats,
+      updated_at: new Date().toISOString(),
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Statistics updated successfully",
+    });
+  } catch (error) {
+    console.error("[LANDING PAGE STATISTICS] Error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}

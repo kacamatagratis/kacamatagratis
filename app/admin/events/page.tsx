@@ -13,8 +13,10 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
-import { db } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import {
   collection,
   getDocs,
@@ -26,6 +28,12 @@ import {
   where,
   orderBy,
 } from "firebase/firestore";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
@@ -34,8 +42,9 @@ interface Event {
   id: string;
   title: string;
   start_time: string;
-  zoom_link: string;
+  zoom_link?: string;
   description?: string;
+  image_url?: string;
   created_at?: string;
 }
 
@@ -75,7 +84,13 @@ export default function EventsPage() {
     start_time: "",
     zoom_link: "",
     description: "",
+    image_url: "",
   });
+
+  // Image upload state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -110,10 +125,60 @@ export default function EventsPage() {
     }
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImage = async (): Promise<string> => {
+    if (!imageFile) return "";
+
+    setUploading(true);
+    try {
+      // Create a unique filename
+      const timestamp = Date.now();
+      const filename = `events/${timestamp}_${imageFile.name}`;
+      const storageRef = ref(storage, filename);
+
+      // Upload file
+      await uploadBytes(storageRef, imageFile);
+
+      // Get download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      return downloadURL;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image");
+      return "";
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
 
     try {
+      // Upload image if there's a new file
+      let imageUrl = formData.image_url;
+      if (imageFile) {
+        imageUrl = await uploadImage();
+        if (!imageUrl && imageFile) {
+          // Upload failed
+          setUploading(false);
+          return;
+        }
+      }
+
       if (editingEvent) {
         // Update existing event
         const eventRef = doc(db, "events", editingEvent.id);
@@ -122,7 +187,18 @@ export default function EventsPage() {
           start_time: formData.start_time,
           zoom_link: formData.zoom_link,
           description: formData.description,
+          image_url: imageUrl,
         });
+
+        // Delete old image if replaced
+        if (imageFile && editingEvent.image_url) {
+          try {
+            const oldImageRef = ref(storage, editingEvent.image_url);
+            await deleteObject(oldImageRef);
+          } catch (error) {
+            console.log("Could not delete old image:", error);
+          }
+        }
       } else {
         // Create new event
         await addDoc(collection(db, "events"), {
@@ -130,17 +206,21 @@ export default function EventsPage() {
           start_time: formData.start_time,
           zoom_link: formData.zoom_link,
           description: formData.description,
+          image_url: imageUrl,
           created_at: new Date().toISOString(),
         });
       }
 
       setShowModal(false);
       setEditingEvent(null);
+      setImageFile(null);
+      setImagePreview("");
       setFormData({
         title: "",
         start_time: "",
         zoom_link: "",
         description: "",
+        image_url: "",
       });
       loadData();
     } catch (error) {
@@ -154,8 +234,9 @@ export default function EventsPage() {
     setFormData({
       title: event.title,
       start_time: event.start_time,
-      zoom_link: event.zoom_link,
+      zoom_link: event.zoom_link || "",
       description: event.description || "",
+      image_url: event.image_url || "",
     });
     setShowModal(true);
   };
@@ -211,7 +292,7 @@ export default function EventsPage() {
             event_title: event.title,
             sapaan: participant.sapaan,
             name: participant.name,
-            zoom_link: event.zoom_link,
+            zoom_link: event.zoom_link || "",
           },
           participant.id
         );
@@ -310,6 +391,7 @@ export default function EventsPage() {
               start_time: "",
               zoom_link: "",
               description: "",
+              image_url: "",
             });
             setShowModal(true);
           }}
@@ -458,11 +540,10 @@ export default function EventsPage() {
               {/* Zoom Link */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Zoom Link *
+                  Zoom Link (Optional)
                 </label>
                 <input
                   type="url"
-                  required
                   value={formData.zoom_link}
                   onChange={(e) =>
                     setFormData({ ...formData, zoom_link: e.target.value })
@@ -470,6 +551,74 @@ export default function EventsPage() {
                   placeholder="https://zoom.us/j/..."
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  If empty, Zoom button won't show on landing page
+                </p>
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Event Image (Optional)
+                </label>
+
+                {/* File Input */}
+                <div className="mb-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    disabled={uploading}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Select an image file. Recommended size: less than 5MB
+                  </p>
+                </div>
+
+                {/* Image Preview */}
+                {(imagePreview || (editingEvent && formData.image_url)) && (
+                  <div className="relative">
+                    <img
+                      src={imagePreview || formData.image_url}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview("");
+                        if (!editingEvent) {
+                          setFormData({ ...formData, image_url: "" });
+                        }
+                      }}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+
+                {/* Upload Progress */}
+                {uploading && (
+                  <div className="flex items-center gap-2 text-blue-600 mt-2">
+                    <Upload className="w-4 h-4 animate-pulse" />
+                    <span className="text-sm">Uploading image...</span>
+                  </div>
+                )}
               </div>
 
               {/* Description */}
@@ -482,25 +631,60 @@ export default function EventsPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  rows={3}
-                  placeholder="Event description..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={5}
+                  placeholder="Event description... (Press Enter for new lines)"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 whitespace-pre-wrap"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  New lines will be preserved in the display
+                </p>
               </div>
 
               {/* Actions */}
               <div className="flex items-center gap-3">
                 <button
                   type="submit"
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  disabled={uploading}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckCircle className="w-5 h-5" />
-                  <span>{editingEvent ? "Update Event" : "Create Event"}</span>
+                  {uploading ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      <span>{imageFile ? "Uploading..." : "Saving..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      <span>
+                        {editingEvent ? "Update Event" : "Create Event"}
+                      </span>
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  disabled={uploading}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>

@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Validate required environment variables
@@ -29,6 +30,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // Initialize Analytics only on client side
 let analytics;
@@ -40,4 +42,4 @@ if (typeof window !== "undefined") {
   });
 }
 
-export { app, db, analytics };
+export { app, db, storage, analytics };

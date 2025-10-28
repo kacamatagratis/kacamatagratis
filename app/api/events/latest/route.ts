@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
             start_time: event.start_time,
             zoom_link: event.zoom_link,
             description: event.description || "",
+            image_url: event.image_url || "",
           };
           break; // Get only the latest one
         }

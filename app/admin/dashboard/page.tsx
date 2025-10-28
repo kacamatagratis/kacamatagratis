@@ -53,6 +53,8 @@ export default function AdminDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [recentParticipants, setRecentParticipants] = useState<any[]>([]);
+  const [sortField, setSortField] = useState<string>("registered_at");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [pendingNotifications, setPendingNotifications] = useState<
     PendingNotification[]
   >([]);
@@ -116,6 +118,45 @@ export default function AdminDashboard() {
         console.error("[Dashboard] Failed to trigger automation:", error);
       }
     }
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortedParticipants = () => {
+    const sorted = [...recentParticipants].sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // Handle special cases
+      if (sortField === "name") {
+        aValue = `${a.sapaan} ${a.name}`.toLowerCase();
+        bValue = `${b.sapaan} ${b.name}`.toLowerCase();
+      } else if (sortField === "registered_at") {
+        aValue = new Date(a.registered_at).getTime();
+        bValue = new Date(b.registered_at).getTime();
+      } else if (sortField === "status") {
+        aValue = a.status === "sudah_join" ? 1 : 0;
+        bValue = b.status === "sudah_join" ? 1 : 0;
+      } else {
+        aValue = String(aValue || "").toLowerCase();
+        bValue = String(bValue || "").toLowerCase();
+      }
+
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
   };
 
   const fetchDashboardData = async () => {
@@ -209,23 +250,50 @@ export default function AdminDashboard() {
       }));
 
       // Calculate top referrer
-      const referrerMap = new Map<string, number>();
+      // Helper function to normalize phone numbers for comparison
+      const normalizePhone = (phone: string | null) => {
+        if (!phone) return null;
+        return phone.replace(/[^0-9]/g, ""); // Remove all non-numeric characters
+      };
+
+      const referrerMap = new Map<string, { count: number; name: string }>();
+
       participantsSnap.docs.forEach((doc) => {
         const data = doc.data();
         if (data.referrer_phone) {
-          referrerMap.set(
-            data.referrer_phone,
-            (referrerMap.get(data.referrer_phone) || 0) + 1
-          );
+          const normalizedReferrerPhone = normalizePhone(data.referrer_phone);
+          if (!normalizedReferrerPhone) return;
+
+          const existing = referrerMap.get(normalizedReferrerPhone);
+          if (existing) {
+            existing.count += 1;
+          } else {
+            // Find the referrer's name from participants
+            const referrerDoc = participantsSnap.docs.find((d) => {
+              const normalizedPhone = normalizePhone(d.data().phone);
+              return normalizedPhone === normalizedReferrerPhone;
+            });
+
+            const referrerName = referrerDoc
+              ? `${referrerDoc.data().sapaan || ""} ${
+                  referrerDoc.data().name || ""
+                }`.trim() || data.referrer_phone
+              : data.referrer_phone;
+
+            referrerMap.set(normalizedReferrerPhone, {
+              count: 1,
+              name: referrerName,
+            });
+          }
         }
       });
 
       let topReferrer = "";
       let topReferrerCount = 0;
-      referrerMap.forEach((count, phone) => {
-        if (count > topReferrerCount) {
-          topReferrerCount = count;
-          topReferrer = phone;
+      referrerMap.forEach((data, phone) => {
+        if (data.count > topReferrerCount) {
+          topReferrerCount = data.count;
+          topReferrer = data.name;
         }
       });
 
@@ -425,20 +493,60 @@ export default function AdminDashboard() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
+                <th
+                  onClick={() => handleSort("name")}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    Name
+                    {sortField === "name" && (
+                      <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  City
+                <th
+                  onClick={() => handleSort("city")}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    City
+                    {sortField === "city" && (
+                      <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Phone
+                <th
+                  onClick={() => handleSort("phone")}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    Phone
+                    {sortField === "phone" && (
+                      <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                <th
+                  onClick={() => handleSort("status")}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    Status
+                    {sortField === "status" && (
+                      <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Registered
+                <th
+                  onClick={() => handleSort("registered_at")}
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-1">
+                    Registered
+                    {sortField === "registered_at" && (
+                      <span>{sortDirection === "asc" ? "↑" : "↓"}</span>
+                    )}
+                  </div>
                 </th>
               </tr>
             </thead>
@@ -453,7 +561,7 @@ export default function AdminDashboard() {
                   </td>
                 </tr>
               ) : (
-                recentParticipants.map((participant) => (
+                getSortedParticipants().map((participant) => (
                   <tr key={participant.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -474,12 +582,12 @@ export default function AdminDashboard() {
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           participant.status === "sudah_join"
                             ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
+                            : "bg-blue-100 text-blue-800"
                         }`}
                       >
                         {participant.status === "sudah_join"
                           ? "Joined"
-                          : "Pending"}
+                          : "New Lead"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

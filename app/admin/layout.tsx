@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Share2,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import AutomationStatusIndicator from "@/components/AutomationStatusIndicator";
@@ -78,6 +79,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: Calendar,
       label: "Events",
       href: "/admin/events",
+    },
+    {
+      icon: FileText,
+      label: "Landing Page",
+      href: "/admin/landing-page",
     },
     {
       icon: MessageSquare,

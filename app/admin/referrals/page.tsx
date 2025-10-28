@@ -36,7 +36,7 @@ interface ReferrerStats {
   referrals: Participant[];
 }
 
-type FilterPeriod = "all" | "month" | "year";
+type FilterPeriod = "all" | "month" | "year" | "custom";
 
 export default function ReferralsPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -49,6 +49,8 @@ export default function ReferralsPage() {
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   useEffect(() => {
     loadData();
@@ -57,18 +59,55 @@ export default function ReferralsPage() {
   useEffect(() => {
     // Apply filter when period changes
     applyFilter();
-  }, [filterPeriod, selectedMonth, selectedYear, referrerStats]);
+  }, [
+    filterPeriod,
+    selectedMonth,
+    selectedYear,
+    startDate,
+    endDate,
+    referrerStats,
+  ]);
 
   const applyFilter = () => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
+    console.log("[FILTER] Filter period:", filterPeriod);
+    console.log("[FILTER] Start date:", startDate);
+    console.log("[FILTER] End date:", endDate);
+
     let filtered = referrerStats
       .map((referrer) => {
         let filteredReferrals = referrer.referrals;
 
-        if (filterPeriod === "month") {
+        if (filterPeriod === "custom") {
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+
+            console.log("[FILTER] Date range:", start, "to", end);
+
+            filteredReferrals = referrer.referrals.filter((r) => {
+              const date = new Date(r.registered_at);
+              const isInRange = date >= start && date <= end;
+              if (isInRange) {
+                console.log(
+                  "[FILTER] Including referral:",
+                  r.name,
+                  "registered at",
+                  date
+                );
+              }
+              return isInRange;
+            });
+          } else {
+            // If custom is selected but dates are not set, show nothing
+            filteredReferrals = [];
+          }
+        } else if (filterPeriod === "month") {
           const targetMonth = selectedMonth
             ? parseInt(selectedMonth)
             : currentMonth;
@@ -104,6 +143,12 @@ export default function ReferralsPage() {
 
     // Sort by total referrals
     filtered.sort((a, b) => b.totalReferrals - a.totalReferrals);
+
+    console.log("[FILTER] Filtered referrers count:", filtered.length);
+    console.log(
+      "[FILTER] Total referrals in period:",
+      filtered.reduce((sum, r) => sum + r.totalReferrals, 0)
+    );
 
     setFilteredReferrerStats(filtered);
   };
@@ -197,7 +242,7 @@ export default function ReferralsPage() {
 
   // Calculate stats based on filtered data
   const displayStats =
-    filteredReferrerStats.length > 0 ? filteredReferrerStats : referrerStats;
+    filterPeriod === "all" ? referrerStats : filteredReferrerStats;
   const totalReferrals = displayStats.reduce(
     (sum, r) => sum + r.totalReferrals,
     0
@@ -280,6 +325,16 @@ export default function ReferralsPage() {
               All Time
             </button>
             <button
+              onClick={() => setFilterPeriod("custom")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
+                filterPeriod === "custom"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Custom Range
+            </button>
+            <button
               onClick={() => setFilterPeriod("month")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
                 filterPeriod === "month"
@@ -300,6 +355,41 @@ export default function ReferralsPage() {
               This Year
             </button>
           </div>
+
+          {/* Custom Date Range */}
+          {filterPeriod === "custom" && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-600" />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  placeholder="Start Date"
+                />
+              </div>
+              <span className="text-gray-600 text-sm">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                placeholder="End Date"
+              />
+              {startDate && endDate && (
+                <button
+                  onClick={() => {
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-medium"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Month Selector */}
           {filterPeriod === "month" && (

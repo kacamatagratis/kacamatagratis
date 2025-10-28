@@ -17,6 +17,7 @@ import {
   Briefcase,
   Phone,
   Share2,
+  Trash2,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import {
@@ -27,7 +28,9 @@ import {
   orderBy,
   doc,
   updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
+import { useToast } from "@/hooks/useToast";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +50,7 @@ interface Participant {
 }
 
 export default function ParticipantsPage() {
+  const { showToast, showConfirm, ToastContainer } = useToast();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [filteredParticipants, setFilteredParticipants] = useState<
     Participant[]
@@ -96,6 +100,23 @@ export default function ParticipantsPage() {
     }
   };
 
+  // Helper function to normalize phone numbers for comparison
+  const normalizePhone = (phone: string | null) => {
+    if (!phone) return null;
+    return phone.replace(/[^0-9]/g, ""); // Remove all non-numeric characters
+  };
+
+  // Calculate how many people a participant has referred
+  const getReferralCount = (participantPhone: string) => {
+    const normalizedPhone = normalizePhone(participantPhone);
+    if (!normalizedPhone) return 0;
+
+    return participants.filter((p) => {
+      const normalizedReferrerPhone = normalizePhone(p.referrer_phone);
+      return normalizedReferrerPhone === normalizedPhone;
+    }).length;
+  };
+
   const filterParticipants = () => {
     let filtered = [...participants];
 
@@ -135,6 +156,33 @@ export default function ParticipantsPage() {
     } catch (error) {
       console.error("Error updating status:", error);
     }
+  };
+
+  const deleteParticipant = async (
+    participantId: string,
+    participantName: string
+  ) => {
+    showConfirm(
+      "Delete Participant",
+      `Are you sure you want to delete ${participantName}? This action cannot be undone.`,
+      async () => {
+        try {
+          const participantRef = doc(db, "participants", participantId);
+          await deleteDoc(participantRef);
+          showToast(
+            `${participantName} has been deleted successfully.`,
+            "success"
+          );
+          await loadParticipants();
+          if (showModal) {
+            setShowModal(false);
+          }
+        } catch (error) {
+          console.error("Error deleting participant:", error);
+          showToast("Failed to delete participant. Please try again.", "error");
+        }
+      }
+    );
   };
 
   const exportToCSV = () => {
@@ -338,7 +386,7 @@ export default function ParticipantsPage() {
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center gap-1 text-sm text-gray-600">
                         <Share2 className="w-4 h-4" />
-                        {participant.referrer_sequence}
+                        {getReferralCount(participant.phone)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
@@ -351,24 +399,39 @@ export default function ParticipantsPage() {
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           participant.status === "sudah_join"
                             ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
+                            : "bg-blue-100 text-blue-800"
                         }`}
                       >
                         {participant.status === "sudah_join"
                           ? "Sudah Join"
-                          : "Belum Join"}
+                          : "New Lead"}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => {
-                          setSelectedParticipant(participant);
-                          setShowModal(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedParticipant(participant);
+                            setShowModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-700 p-1 hover:bg-blue-50 rounded transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() =>
+                            deleteParticipant(
+                              participant.id,
+                              `${participant.sapaan} ${participant.name}`
+                            )
+                          }
+                          className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Participant"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -479,7 +542,7 @@ export default function ParticipantsPage() {
                     <p className="text-sm text-gray-500">Total Referrals</p>
                     <p className="font-medium text-gray-900 flex items-center gap-2">
                       <Share2 className="w-4 h-4" />
-                      {selectedParticipant.referrer_sequence} people
+                      {getReferralCount(selectedParticipant.phone)} people
                     </p>
                   </div>
                   {selectedParticipant.referrer_phone && (
@@ -524,9 +587,32 @@ export default function ParticipantsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Modal Footer with Action Buttons */}
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex items-center justify-between">
+              <button
+                onClick={() =>
+                  deleteParticipant(
+                    selectedParticipant.id,
+                    `${selectedParticipant.sapaan} ${selectedParticipant.name}`
+                  )
+                }
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Participant
+              </button>
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
+      <ToastContainer />
     </div>
   );
 }

@@ -7,8 +7,9 @@ interface Event {
   id: string;
   title: string;
   start_time: string;
-  zoom_link: string;
-  description: string;
+  zoom_link?: string;
+  description?: string;
+  image_url?: string;
 }
 
 export default function LatestEvent() {
@@ -81,52 +82,67 @@ export default function LatestEvent() {
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-8">
-      <div className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg border-2 border-blue-200 p-6 hover:shadow-xl transition-shadow">
-        <div className="flex items-start gap-4">
-          <div className="bg-blue-600 text-white rounded-lg p-3 shrink-0">
-            <Calendar className="w-8 h-8" />
+      <div className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg shadow-lg border-2 border-blue-200 overflow-hidden hover:shadow-xl transition-shadow">
+        {/* Event Image (if provided) */}
+        {event.image_url && (
+          <div className="w-full h-48 sm:h-64 relative">
+            <img
+              src={event.image_url}
+              alt={event.title}
+              className="w-full h-full object-cover"
+            />
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                Upcoming Event
-              </span>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">
-              {event.title}
-            </h2>
+        )}
 
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center gap-2 text-gray-700">
-                <Calendar className="w-4 h-4 text-blue-600" />
-                <span className="font-medium">{formattedDate}</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-700">
-                <Clock className="w-4 h-4 text-blue-600" />
-                <span className="font-medium">{formattedTime} WIB</span>
-              </div>
+        <div className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="bg-blue-600 text-white rounded-lg p-3 shrink-0">
+              <Calendar className="w-8 h-8" />
             </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  Upcoming Event
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                {event.title}
+              </h2>
 
-            {event.description && (
-              <div className="bg-white/50 rounded-lg p-3 mb-4">
-                <div className="flex items-start gap-2">
-                  <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                  <p className="text-sm text-gray-700">{event.description}</p>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium">{formattedDate}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium">{formattedTime} WIB</span>
                 </div>
               </div>
-            )}
 
-            {event.zoom_link && (
-              <a
-                href={event.zoom_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                <Video className="w-5 h-5" />
-                <span>Join Event on Zoom</span>
-              </a>
-            )}
+              {event.description && (
+                <div className="bg-white/50 rounded-lg p-3 mb-4">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                      {event.description}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {event.zoom_link && (
+                <a
+                  href={event.zoom_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  <Video className="w-5 h-5" />
+                  <span>Join Event on Zoom</span>
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
