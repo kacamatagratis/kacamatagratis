@@ -29,12 +29,26 @@ export const metadata: Metadata = {
     type: "website",
     locale: "id_ID",
     siteName: "KacamataGratis.com",
+    images: [
+      {
+        url: "/icon.jpg",
+        width: 512,
+        height: 512,
+        alt: "Kacamata Gratis Icon",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Gerakan Donasi 1 Juta Kacamata Medis Gratis untuk Indonesia",
     description:
       "Bersama SocialPreneur Movement Indonesia, kita bantu penderita glaukoma dan anak-anak dengan mata minus berat",
+    images: [
+      {
+        url: "/icon.jpg",
+        alt: "Kacamata Gratis Icon",
+      },
+    ],
   },
   robots: {
     index: true,
