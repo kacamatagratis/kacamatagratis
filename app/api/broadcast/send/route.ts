@@ -16,6 +16,18 @@ function formatPhoneForDripSender(phone: string): string {
   return formatted;
 }
 
+// Helper function to generate random text to avoid spam detection
+function generateRandomText(): string {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomCode = "";
+  for (let i = 0; i < 5; i++) {
+    randomCode += characters.charAt(
+      Math.floor(Math.random() * characters.length)
+    );
+  }
+  return `\n\n#${randomCode}`;
+}
+
 // Helper function to get random active API key
 async function getRandomApiKey() {
   try {
@@ -81,6 +93,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Add random text to avoid spam detection
+    const messageWithRandom = message + generateRandomText();
+
     // Send message via DripSender
     const response = await fetch("https://api.dripsender.id/send", {
       method: "POST",
@@ -90,7 +105,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         api_key: apiKey.api_key,
         phone: formattedPhone,
-        text: message,
+        text: messageWithRandom,
       }),
     });
 

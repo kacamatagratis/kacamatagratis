@@ -55,6 +55,20 @@ async function getRandomApiKey(): Promise<DripSenderKey | null> {
 }
 
 /**
+ * Generate random text to append to messages to avoid spam detection
+ */
+function generateRandomText(): string {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let randomCode = "";
+  for (let i = 0; i < 5; i++) {
+    randomCode += characters.charAt(
+      Math.floor(Math.random() * characters.length)
+    );
+  }
+  return `\n\n#${randomCode}`;
+}
+
+/**
  * Update API key usage statistics
  */
 async function updateKeyUsage(keyId: string) {
@@ -200,6 +214,9 @@ export async function sendWhatsAppMessage(
     // Replace variables in template
     const message = replaceVariables(template.content, variables);
 
+    // Add random text to avoid spam detection
+    const messageWithRandom = message + generateRandomText();
+
     // Send message via DripSender
     const response = await fetch("https://api.dripsender.id/send", {
       method: "POST",
@@ -209,7 +226,7 @@ export async function sendWhatsAppMessage(
       body: JSON.stringify({
         api_key: apiKey.api_key,
         phone: formattedPhone,
-        text: message,
+        text: messageWithRandom,
       }),
     });
 
@@ -265,6 +282,9 @@ export async function sendWhatsAppMessage(
       // Try with another API key if first one fails
       const retryKey = await getRandomApiKey();
       if (retryKey && retryKey.id !== apiKey.id) {
+        // Generate new random text for retry
+        const retryMessageWithRandom = message + generateRandomText();
+
         const retryResponse = await fetch("https://api.dripsender.id/send", {
           method: "POST",
           headers: {
@@ -273,7 +293,7 @@ export async function sendWhatsAppMessage(
           body: JSON.stringify({
             api_key: retryKey.api_key,
             phone: formattedPhone,
-            text: message,
+            text: retryMessageWithRandom,
           }),
         });
 
@@ -352,6 +372,9 @@ export async function sendWhatsAppMessageWithMedia(
 
     const message = replaceVariables(template.content, variables);
 
+    // Add random text to avoid spam detection
+    const messageWithRandom = message + generateRandomText();
+
     const response = await fetch("https://api.dripsender.id/send", {
       method: "POST",
       headers: {
@@ -360,7 +383,7 @@ export async function sendWhatsAppMessageWithMedia(
       body: JSON.stringify({
         api_key: apiKey.api_key,
         phone: formattedPhone,
-        text: message,
+        text: messageWithRandom,
         media_url: mediaUrl,
       }),
     });
