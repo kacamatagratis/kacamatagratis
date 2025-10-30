@@ -22,9 +22,10 @@ interface ConfirmState {
 export function useToast() {
   const [toasts, setToasts] = useState<ToastState[]>([]);
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+  const [toastCounter, setToastCounter] = useState(0);
 
   const showToast = useCallback((message: string, type: ToastType = "info") => {
-    const id = Date.now();
+    const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { message, type, id }]);
   }, []);
 

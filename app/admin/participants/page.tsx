@@ -65,6 +65,14 @@ export default function ParticipantsPage() {
     useState<Participant | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [cities, setCities] = useState<string[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    sapaan: "",
+    name: "",
+    city: "",
+    profession: "",
+    phone: "",
+  });
 
   useEffect(() => {
     loadParticipants();
@@ -164,6 +172,53 @@ export default function ParticipantsPage() {
     } catch (error) {
       console.error("Error updating status:", error);
     }
+  };
+
+  const handleEditClick = () => {
+    if (selectedParticipant) {
+      setEditFormData({
+        sapaan: selectedParticipant.sapaan,
+        name: selectedParticipant.name,
+        city: selectedParticipant.city,
+        profession: selectedParticipant.profession,
+        phone: selectedParticipant.phone,
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedParticipant) return;
+
+    try {
+      const participantRef = doc(db, "participants", selectedParticipant.id);
+      await updateDoc(participantRef, {
+        sapaan: editFormData.sapaan,
+        name: editFormData.name,
+        city: editFormData.city,
+        profession: editFormData.profession,
+        phone: editFormData.phone,
+      });
+
+      showToast("Participant updated successfully!", "success");
+      setIsEditing(false);
+      await loadParticipants();
+      setShowModal(false);
+    } catch (error) {
+      console.error("Error updating participant:", error);
+      showToast("Failed to update participant. Please try again.", "error");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditFormData({
+      sapaan: "",
+      name: "",
+      city: "",
+      profession: "",
+      phone: "",
+    });
   };
 
   const deleteParticipant = async (
@@ -448,11 +503,30 @@ export default function ParticipantsPage() {
                             onClick={() => {
                               setSelectedParticipant(participant);
                               setShowModal(true);
+                              setIsEditing(false);
                             }}
                             className="text-blue-600 hover:text-blue-700 p-1 hover:bg-blue-50 rounded transition-colors"
                             title="View Details"
                           >
                             <Eye className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedParticipant(participant);
+                              setEditFormData({
+                                sapaan: participant.sapaan,
+                                name: participant.name,
+                                city: participant.city,
+                                profession: participant.profession,
+                                phone: participant.phone,
+                              });
+                              setIsEditing(true);
+                              setShowModal(true);
+                            }}
+                            className="text-green-600 hover:text-green-700 p-1 hover:bg-green-50 rounded transition-colors"
+                            title="Edit Participant"
+                          >
+                            <Edit className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() =>
@@ -515,10 +589,13 @@ export default function ParticipantsPage() {
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">
-                Participant Details
+                {isEditing ? "Edit Participant" : "Participant Details"}
               </h2>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setIsEditing(false);
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X className="w-6 h-6" />
@@ -531,35 +608,124 @@ export default function ParticipantsPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   Basic Information
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Full Name</p>
-                    <p className="font-medium text-gray-900">
-                      {selectedParticipant.sapaan} {selectedParticipant.name}
-                    </p>
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Sapaan
+                      </label>
+                      <select
+                        value={editFormData.sapaan}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            sapaan: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="Bapak">Bapak</option>
+                        <option value="Ibu">Ibu</option>
+                        <option value="Saudara">Saudara</option>
+                        <option value="Saudari">Saudari</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.name}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            name: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.city}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            city: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Profession
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.profession}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            profession: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        WhatsApp Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={editFormData.phone}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            phone: e.target.value,
+                          })
+                        }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Profession</p>
-                    <p className="font-medium text-gray-900 flex items-center gap-2">
-                      <Briefcase className="w-4 h-4" />
-                      {selectedParticipant.profession}
-                    </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-500">Full Name</p>
+                      <p className="font-medium text-gray-900">
+                        {selectedParticipant.sapaan} {selectedParticipant.name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Profession</p>
+                      <p className="font-medium text-gray-900 flex items-center gap-2">
+                        <Briefcase className="w-4 h-4" />
+                        {selectedParticipant.profession}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">City</p>
+                      <p className="font-medium text-gray-900 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        {selectedParticipant.city}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">WhatsApp</p>
+                      <p className="font-medium text-gray-900 flex items-center gap-2">
+                        <Phone className="w-4 h-4" />
+                        {selectedParticipant.phone}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">City</p>
-                    <p className="font-medium text-gray-900 flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      {selectedParticipant.city}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">WhatsApp</p>
-                    <p className="font-medium text-gray-900 flex items-center gap-2">
-                      <Phone className="w-4 h-4" />
-                      {selectedParticipant.phone}
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Referral Info */}
@@ -646,24 +812,56 @@ export default function ParticipantsPage() {
 
             {/* Modal Footer with Action Buttons */}
             <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex items-center justify-between">
-              <button
-                onClick={() =>
-                  deleteParticipant(
-                    selectedParticipant.id,
-                    `${selectedParticipant.sapaan} ${selectedParticipant.name}`
-                  )
-                }
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete Participant
-              </button>
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Close
-              </button>
+              {isEditing ? (
+                <>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Save Changes
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() =>
+                      deleteParticipant(
+                        selectedParticipant.id,
+                        `${selectedParticipant.sapaan} ${selectedParticipant.name}`
+                      )
+                    }
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete Participant
+                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleEditClick}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowModal(false);
+                        setIsEditing(false);
+                      }}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
