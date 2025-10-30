@@ -23,6 +23,14 @@ export default function RegistrationForm() {
     const ref = searchParams.get("ref");
     if (ref) {
       setReferrerPhone(ref);
+      // Save to localStorage
+      localStorage.setItem("referral_code", ref);
+    } else {
+      // Check localStorage if no ref in URL
+      const savedRef = localStorage.getItem("referral_code");
+      if (savedRef) {
+        setReferrerPhone(savedRef);
+      }
     }
   }, [searchParams]);
 

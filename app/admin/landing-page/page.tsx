@@ -1989,6 +1989,7 @@ function MediaCoverageSection({ showToast, showConfirm }: ToastProps) {
   const [saving, setSaving] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     location: "",
     title: "",
@@ -2040,6 +2041,34 @@ function MediaCoverageSection({ showToast, showConfirm }: ToastProps) {
       order: media.order,
     });
     setShowModal(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formDataUpload,
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setFormData({ ...formData, image_url: data.url });
+        showToast("Image uploaded successfully!", "success");
+      } else {
+        showToast("Failed to upload image: " + data.error, "error");
+      }
+    } catch (error) {
+      showToast("Error uploading image: " + error, "error");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -2256,26 +2285,32 @@ function MediaCoverageSection({ showToast, showConfirm }: ToastProps) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image URL
+                  Image
                 </label>
                 <input
-                  type="url"
-                  value={formData.image_url}
-                  onChange={(e) =>
-                    setFormData({ ...formData, image_url: e.target.value })
-                  }
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploading}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  Note: Image upload feature coming soon. Use direct URL for
-                  now.
-                </p>
-                {formData.image_url && (
-                  <img
-                    src={formData.image_url}
-                    alt="Preview"
-                    className="mt-2 h-20 w-20 object-cover rounded border"
-                  />
+                {uploading && (
+                  <p className="text-sm text-blue-600 mt-1 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading image...
+                  </p>
+                )}
+                {formData.image_url && !uploading && (
+                  <div className="mt-2">
+                    <img
+                      src={formData.image_url}
+                      alt="Preview"
+                      className="h-20 w-20 object-cover rounded border"
+                    />
+                    <p className="text-sm text-green-600 mt-1">
+                      Image uploaded successfully
+                    </p>
+                  </div>
                 )}
               </div>
 

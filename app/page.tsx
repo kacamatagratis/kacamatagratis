@@ -99,6 +99,8 @@ function HomeContent() {
   const [landingData, setLandingData] = useState<LandingPageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSimpleMode, setIsSimpleMode] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralName, setReferralName] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -110,6 +112,41 @@ function HomeContent() {
     // Check for mod=simple parameter
     const mod = searchParams.get("mod");
     setIsSimpleMode(mod === "simple");
+
+    // Handle referral code from URL or localStorage
+    const ref = searchParams.get("ref");
+    let activeRef = ref;
+
+    if (ref) {
+      // Save to localStorage
+      localStorage.setItem("referral_code", ref);
+      setReferralCode(ref);
+    } else {
+      // Check localStorage
+      const savedRef = localStorage.getItem("referral_code");
+      if (savedRef) {
+        activeRef = savedRef;
+        setReferralCode(savedRef);
+      }
+    }
+
+    // Fetch referrer name if we have a referral code
+    if (activeRef) {
+      const fetchReferrerName = async () => {
+        try {
+          const response = await fetch(
+            `/api/participants?referral_code=${activeRef}`
+          );
+          const data = await response.json();
+          if (data.success && data.participant) {
+            setReferralName(data.participant.name);
+          }
+        } catch (error) {
+          console.error("Failed to fetch referrer name:", error);
+        }
+      };
+      fetchReferrerName();
+    }
 
     setIsVisible(true);
 
@@ -222,7 +259,9 @@ function HomeContent() {
               href="#zoom"
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium text-sm sm:text-base transition-all duration-300 hover:shadow-lg hover:scale-105 min-h-11 flex items-center justify-center"
             >
-              Ikuti Zoom Sekarang
+              {referralName
+                ? `Hubungi Kami : ${referralName}`
+                : "Ikuti Zoom Sekarang"}
             </a>
           )}
         </div>
@@ -509,7 +548,7 @@ function HomeContent() {
                       <h3 className="text-xl sm:text-2xl font-bold mb-3">
                         {role.title}
                       </h3>
-                      <p className="text-white/90 text-sm sm:text-base leading-relaxed mb-6 flex-grow">
+                      <p className="text-white/90 text-sm sm:text-base leading-relaxed mb-6 grow">
                         {role.description}
                       </p>
                       <a
