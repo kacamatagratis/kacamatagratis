@@ -634,6 +634,48 @@ export default function SettingsPage() {
                               </p>
                             </>
                           )}
+                          {template.type === "referral" && (
+                            <>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{sapaan}"}
+                                </code>{" "}
+                                - Greeting (e.g., Bapak/Ibu)
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{name}"}
+                                </code>{" "}
+                                - Referrer's full name
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{new_participant_name}"}
+                                </code>{" "}
+                                - Name of the new participant who just
+                                registered
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{phone}"}
+                                </code>{" "}
+                                - New participant's phone number
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{referral_count}"}
+                                </code>{" "}
+                                - Total number of successful referrals
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{referrer_sequence}"}
+                                </code>{" "}
+                                - Order number of this referral (1st, 2nd, 3rd,
+                                etc.)
+                              </p>
+                            </>
+                          )}
                           {template.type === "event_reminder" && (
                             <>
                               <p>
@@ -659,6 +701,56 @@ export default function SettingsPage() {
                                   {"{zoom_link}"}
                                 </code>{" "}
                                 - Zoom meeting link
+                              </p>
+                            </>
+                          )}
+                          {template.type === "event" && (
+                            <>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{sapaan}"}
+                                </code>{" "}
+                                - Greeting (e.g., Bapak/Ibu)
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{name}"}
+                                </code>{" "}
+                                - Participant's full name
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{event_title}"}
+                                </code>{" "}
+                                - Name of the event
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{zoom_link}"}
+                                </code>{" "}
+                                - Zoom meeting link
+                              </p>
+                            </>
+                          )}
+                          {template.type === "broadcast" && (
+                            <>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{sapaan}"}
+                                </code>{" "}
+                                - Greeting (e.g., Bapak/Ibu)
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{name}"}
+                                </code>{" "}
+                                - Participant's full name
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{city}"}
+                                </code>{" "}
+                                - Participant's city
                               </p>
                             </>
                           )}
@@ -779,6 +871,46 @@ export default function SettingsPage() {
                               </p>
                             </>
                           )}
+                          {template.type === "referral" && (
+                            <>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{sapaan}"}
+                                </code>{" "}
+                                - Greeting (Bapak/Ibu)
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{name}"}
+                                </code>{" "}
+                                - Referrer's full name
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{new_participant_name}"}
+                                </code>{" "}
+                                - New participant's name
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{phone}"}
+                                </code>{" "}
+                                - New participant's phone number
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{referral_count}"}
+                                </code>{" "}
+                                - Total referrals
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{referrer_sequence}"}
+                                </code>{" "}
+                                - Referral order number
+                              </p>
+                            </>
+                          )}
                           {template.type === "event_reminder" && (
                             <>
                               <p>
@@ -804,6 +936,56 @@ export default function SettingsPage() {
                                   {"{zoom_link}"}
                                 </code>{" "}
                                 - Zoom meeting link
+                              </p>
+                            </>
+                          )}
+                          {template.type === "event" && (
+                            <>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{sapaan}"}
+                                </code>{" "}
+                                - Greeting (Bapak/Ibu)
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{name}"}
+                                </code>{" "}
+                                - Participant's full name
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{event_title}"}
+                                </code>{" "}
+                                - Event name
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{zoom_link}"}
+                                </code>{" "}
+                                - Zoom meeting link
+                              </p>
+                            </>
+                          )}
+                          {template.type === "broadcast" && (
+                            <>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{sapaan}"}
+                                </code>{" "}
+                                - Greeting (Bapak/Ibu)
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{name}"}
+                                </code>{" "}
+                                - Participant's full name
+                              </p>
+                              <p>
+                                <code className="bg-blue-100 px-2 py-0.5 rounded">
+                                  {"{city}"}
+                                </code>{" "}
+                                - Participant's city
                               </p>
                             </>
                           )}

@@ -381,6 +381,7 @@ async function processPendingReferrerAlerts(
           name: referrer.name,
           referral_count: referralCount.toString(),
           new_participant_name: newParticipantName,
+          phone: metadata.phone || "",
           referrer_sequence: referrerSequence.toString(),
         },
         notification.participant_id

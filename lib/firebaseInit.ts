@@ -149,14 +149,22 @@ Terima kasih! 🙏`,
       type: "referral",
       content: `Selamat {sapaan} {name}! 🎊
 
-Seseorang baru saja mendaftar menggunakan kode referral Anda!
+Anda berhasil mengajak {new_participant_name} - {phone} untuk bergabung!
 
-📊 Total Referral: {referral_count} orang
+📊 Total Peserta yang Anda ajak: {referral_count} orang
+🎯 Ini adalah referral ke-{referrer_sequence} Anda
 
-Terus bagikan kode referral Anda untuk mendapatkan lebih banyak reward!
+Terus bagikan link kamu ini untuk mendapatkan lebih banyak reward!
 
 Terima kasih! 🙏`,
-      variables: ["sapaan", "name", "referral_count"],
+      variables: [
+        "sapaan",
+        "name",
+        "new_participant_name",
+        "phone",
+        "referral_count",
+        "referrer_sequence",
+      ],
       created_at: new Date().toISOString(),
     },
     {

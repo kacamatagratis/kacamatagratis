@@ -188,6 +188,7 @@ export async function POST(request: NextRequest) {
             ...participantData,
             new_participant_name: name,
             new_participant_city: city,
+            phone: normalizedPhone,
             referrer_sequence: referrerSequence,
           },
         });
