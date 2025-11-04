@@ -13,7 +13,7 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const { sapaan, name, city, profession, phone, referrerPhone } =
+    const { sapaan, name, city, profession, phone, referrerPhone, choices } =
       await request.json();
 
     // Validate required fields
@@ -115,11 +115,12 @@ export async function POST(request: NextRequest) {
 
     // Create participant document
     const participantData = {
-      sapaan: sapaan || "Bapak/Ibu",
+      sapaan: sapaan || "Rekan",
       name,
       city,
       profession,
       phone: normalizedPhone,
+      choices: choices || [],
       referral_code: normalizedPhone.replace(/\+/g, ""),
       referrer_phone: referrerPhone || null,
       referrer_sequence: referrerSequence,

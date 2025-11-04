@@ -41,6 +41,7 @@ interface Participant {
   city: string;
   profession: string;
   phone: string;
+  choices?: string[];
   referral_code: string;
   referrer_phone: string | null;
   referrer_sequence: number;
@@ -72,6 +73,7 @@ export default function ParticipantsPage() {
     city: "",
     profession: "",
     phone: "",
+    choices: [] as string[],
   });
 
   useEffect(() => {
@@ -182,6 +184,7 @@ export default function ParticipantsPage() {
         city: selectedParticipant.city,
         profession: selectedParticipant.profession,
         phone: selectedParticipant.phone,
+        choices: selectedParticipant.choices || [],
       });
       setIsEditing(true);
     }
@@ -198,6 +201,7 @@ export default function ParticipantsPage() {
         city: editFormData.city,
         profession: editFormData.profession,
         phone: editFormData.phone,
+        choices: editFormData.choices,
       });
 
       showToast("Participant updated successfully!", "success");
@@ -218,6 +222,7 @@ export default function ParticipantsPage() {
       city: "",
       profession: "",
       phone: "",
+      choices: [],
     });
   };
 
@@ -412,6 +417,9 @@ export default function ParticipantsPage() {
                   Phone
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Pilihan
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Referrals
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -431,7 +439,7 @@ export default function ParticipantsPage() {
             <tbody className="divide-y divide-gray-200">
               {currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center">
+                  <td colSpan={9} className="px-6 py-8 text-center">
                     <p className="text-gray-500">No participants found</p>
                   </td>
                 </tr>
@@ -458,6 +466,27 @@ export default function ParticipantsPage() {
                         <code className="text-xs bg-gray-100 px-2 py-1 rounded">
                           {participant.phone}
                         </code>
+                      </td>
+                      <td className="px-6 py-4">
+                        {participant.choices &&
+                        participant.choices.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            {participant.choices.map((choice, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 w-fit"
+                              >
+                                {choice === "penerima_bantuan"
+                                  ? "Penerima"
+                                  : choice === "relawan"
+                                  ? "Relawan"
+                                  : "SE"}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center gap-1 text-sm text-gray-600">
@@ -519,6 +548,7 @@ export default function ParticipantsPage() {
                                 city: participant.city,
                                 profession: participant.profession,
                                 phone: participant.phone,
+                                choices: participant.choices || [],
                               });
                               setIsEditing(true);
                               setShowModal(true);
@@ -694,6 +724,83 @@ export default function ParticipantsPage() {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Pilihan (bisa pilih lebih dari 1)
+                      </label>
+                      <div className="space-y-3">
+                        <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={editFormData.choices.includes(
+                              "penerima_bantuan"
+                            )}
+                            onChange={(e) => {
+                              const newChoices = e.target.checked
+                                ? [...editFormData.choices, "penerima_bantuan"]
+                                : editFormData.choices.filter(
+                                    (c) => c !== "penerima_bantuan"
+                                  );
+                              setEditFormData({
+                                ...editFormData,
+                                choices: newChoices,
+                              });
+                            }}
+                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-gray-700 text-sm">
+                            Saya ingin mendaftar sebagai penerima bantuan
+                          </span>
+                        </label>
+                        <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={editFormData.choices.includes("relawan")}
+                            onChange={(e) => {
+                              const newChoices = e.target.checked
+                                ? [...editFormData.choices, "relawan"]
+                                : editFormData.choices.filter(
+                                    (c) => c !== "relawan"
+                                  );
+                              setEditFormData({
+                                ...editFormData,
+                                choices: newChoices,
+                              });
+                            }}
+                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-gray-700 text-sm">
+                            Saya ingin mendaftar sebagai relawan
+                          </span>
+                        </label>
+                        <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={editFormData.choices.includes(
+                              "social_entrepreneur"
+                            )}
+                            onChange={(e) => {
+                              const newChoices = e.target.checked
+                                ? [
+                                    ...editFormData.choices,
+                                    "social_entrepreneur",
+                                  ]
+                                : editFormData.choices.filter(
+                                    (c) => c !== "social_entrepreneur"
+                                  );
+                              setEditFormData({
+                                ...editFormData,
+                                choices: newChoices,
+                              });
+                            }}
+                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-gray-700 text-sm">
+                            Saya ingin mendaftar sebagai Social Entrepreneur
+                          </span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
@@ -724,6 +831,26 @@ export default function ParticipantsPage() {
                         {selectedParticipant.phone}
                       </p>
                     </div>
+                    {selectedParticipant.choices &&
+                      selectedParticipant.choices.length > 0 && (
+                        <div className="col-span-2">
+                          <p className="text-sm text-gray-500 mb-2">Pilihan</p>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedParticipant.choices.map((choice, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {choice === "penerima_bantuan"
+                                  ? "Penerima Bantuan"
+                                  : choice === "relawan"
+                                  ? "Relawan"
+                                  : "Social Entrepreneur"}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                   </div>
                 )}
               </div>

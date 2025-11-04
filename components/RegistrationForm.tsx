@@ -7,11 +7,12 @@ import { User, MapPin, Briefcase, Phone, Send } from "lucide-react";
 export default function RegistrationForm() {
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
-    sapaan: "Bapak",
+    sapaan: "Rekan",
     name: "",
     city: "",
     profession: "",
     phone: "",
+    choices: [] as string[],
   });
   const [referrerPhone, setReferrerPhone] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,6 +55,9 @@ export default function RegistrationForm() {
       if (response.ok) {
         setSuccess(true);
 
+        // Clear inactivity modal flag since user registered
+        localStorage.removeItem("inactivity_modal_dismissed");
+
         // Fetch general settings for WhatsApp redirect number and message template
         const settingsResponse = await fetch("/api/general-settings");
         const settingsData = await settingsResponse.json();
@@ -95,6 +99,18 @@ export default function RegistrationForm() {
     });
   };
 
+  const handleChoiceChange = (choice: string) => {
+    setFormData((prev) => {
+      const isSelected = prev.choices.includes(choice);
+      return {
+        ...prev,
+        choices: isSelected
+          ? prev.choices.filter((c) => c !== choice)
+          : [...prev.choices, choice],
+      };
+    });
+  };
+
   if (success) {
     return (
       <div className="bg-white rounded-2xl shadow-xl p-8 text-center" id="zoom">
@@ -127,11 +143,9 @@ export default function RegistrationForm() {
   return (
     <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8" id="zoom">
       <div className="text-center mb-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
-          Daftar Sekarang
-        </h2>
-        <p className="text-gray-600">
-          Isi formulir di bawah untuk mengikuti sosialisasi program
+        <p className="text-gray-700 text-base sm:text-lg leading-relaxed">
+          Isi formulir dibawah ini untuk ikut terlibat dalam gerakan dan
+          mengikuti sosialisasi program
         </p>
       </div>
 
@@ -142,29 +156,6 @@ export default function RegistrationForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Sapaan */}
-        <div>
-          <label
-            htmlFor="sapaan"
-            className="block text-sm font-semibold text-gray-700 mb-2"
-          >
-            Sapaan
-          </label>
-          <select
-            id="sapaan"
-            name="sapaan"
-            required
-            value={formData.sapaan}
-            onChange={handleChange}
-            className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-          >
-            <option value="Bapak">Bapak</option>
-            <option value="Ibu">Ibu</option>
-            <option value="Saudara">Saudara</option>
-            <option value="Saudari">Saudari</option>
-          </select>
-        </div>
-
         {/* Nama */}
         <div>
           <label
@@ -268,6 +259,48 @@ export default function RegistrationForm() {
           </p>
         </div>
 
+        {/* Pilihan */}
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Pilihan Anda (bisa pilih lebih dari 1)
+          </label>
+          <div className="space-y-3">
+            <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.choices.includes("penerima_bantuan")}
+                onChange={() => handleChoiceChange("penerima_bantuan")}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-gray-700 text-sm">
+                Saya ingin mendaftar sebagai penerima bantuan
+              </span>
+            </label>
+            <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.choices.includes("relawan")}
+                onChange={() => handleChoiceChange("relawan")}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-gray-700 text-sm">
+                Saya ingin mendaftar sebagai relawan
+              </span>
+            </label>
+            <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.choices.includes("social_entrepreneur")}
+                onChange={() => handleChoiceChange("social_entrepreneur")}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-gray-700 text-sm">
+                Saya ingin mendaftar sebagai Social Entrepreneur
+              </span>
+            </label>
+          </div>
+        </div>
+
         {/* Submit Button */}
         <button
           type="submit"
@@ -282,7 +315,7 @@ export default function RegistrationForm() {
           ) : (
             <>
               <Send className="w-5 h-5" />
-              <span>Daftar & Lanjutkan ke WhatsApp</span>
+              <span>Saya Ingin Ikut Gerakan Ini via Zoom</span>
             </>
           )}
         </button>

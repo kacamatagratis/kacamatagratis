@@ -9,12 +9,15 @@ import {
   ArrowRight,
   ChevronDown,
   Clock,
+  Send,
 } from "lucide-react";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import RegistrationForm from "@/components/RegistrationForm";
 import LatestEvent from "@/components/LatestEvent";
+import NewJoinerNotification from "@/components/NewJoinerNotification";
+import InactivityModal from "@/components/InactivityModal";
 
 export const dynamic = "force-dynamic";
 
@@ -223,6 +226,11 @@ function HomeContent() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-indigo-50">
+      {/* New Joiner Notification */}
+      {!isSimpleMode && <NewJoinerNotification />}
+
+      {/* Inactivity Modal will be rendered at the end of the page so it overlays the header */}
+
       {/* Scroll Progress Indicator */}
       {!isSimpleMode && (
         <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-100">
@@ -257,11 +265,17 @@ function HomeContent() {
           {!isSimpleMode && (
             <a
               href="#zoom"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium text-sm sm:text-base transition-all duration-300 hover:shadow-lg hover:scale-105 min-h-11 flex items-center justify-center"
+              className="bg-white hover:bg-gray-50 text-gray-900 px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg font-medium text-sm sm:text-base transition-all duration-300 hover:shadow-lg border border-gray-200 flex items-center gap-2"
             >
-              {referralName
-                ? `Hubungi Kami : ${referralName}`
-                : "Ikuti Zoom Sekarang"}
+              <div className="flex flex-col items-start leading-tight">
+                <span className="text-blue-600 font-semibold text-xs sm:text-sm">
+                  Kirim Pesan
+                </span>
+                <span className="text-gray-500 text-xs">
+                  {referralName || "Arief Wijaya"}
+                </span>
+              </div>
+              <Send className="w-4 h-4 text-blue-600" />
             </a>
           )}
         </div>
@@ -321,11 +335,88 @@ function HomeContent() {
                   : "opacity-0 translate-y-8"
               }`}
             >
-              Ikuti ZOOM Penjelasan Program & Cara Jadi Bagian dari Gerakan Ini
+              Saya Ingin Ikut Gerakan Ini via Zoom
               <ArrowRight className="w-5 h-5" />
             </a>
           </div>
         ) : null}
+      </section>
+
+      {/* Latest Event Section */}
+      {!isSimpleMode && (
+        <section className="py-16 bg-white">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <LatestEvent />
+          </div>
+        </section>
+      )}
+
+      {/* Countdown Timer - Only show if there's an upcoming event */}
+      {!isSimpleMode && hasEvent && (
+        <section className="py-12 sm:py-16 bg-linear-to-r from-green-600 to-emerald-600 text-white">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto text-center">
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <Clock className="w-8 h-8" />
+                <h3 className="text-2xl sm:text-3xl font-bold">
+                  Zoom Meeting Berikutnya
+                </h3>
+              </div>
+              <p className="text-lg sm:text-xl text-green-100 mb-8">
+                Bergabunglah dengan sesi informasi kami
+              </p>
+              <div className="grid grid-cols-4 gap-4 sm:gap-6 max-w-2xl mx-auto">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
+                    {timeLeft.days}
+                  </div>
+                  <div className="text-sm sm:text-base text-green-100">
+                    Hari
+                  </div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
+                    {timeLeft.hours}
+                  </div>
+                  <div className="text-sm sm:text-base text-green-100">Jam</div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
+                    {timeLeft.minutes}
+                  </div>
+                  <div className="text-sm sm:text-base text-green-100">
+                    Menit
+                  </div>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
+                    {timeLeft.seconds}
+                  </div>
+                  <div className="text-sm sm:text-base text-green-100">
+                    Detik
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Registration Form Section */}
+      <section className="py-16 sm:py-24 bg-gray-50" id="zoom">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto">
+            <Suspense
+              fallback={
+                <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+                  Loading...
+                </div>
+              }
+            >
+              <RegistrationForm />
+            </Suspense>
+          </div>
+        </div>
       </section>
 
       {/* Value Proposition - Before & After */}
@@ -552,9 +643,16 @@ function HomeContent() {
                         {role.description}
                       </p>
                       <a
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        href="#zoom"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          const el = document.getElementById("zoom");
+                          if (el)
+                            el.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center",
+                            });
+                        }}
                         className="inline-flex items-center justify-center gap-2 bg-white text-blue-600 px-4 py-3 rounded-lg font-semibold text-sm sm:text-base transition-all duration-300 hover:bg-blue-50 hover:shadow-lg group-hover:scale-105"
                       >
                         <span>Hubungi Kami</span>
@@ -776,98 +874,6 @@ function HomeContent() {
           </section>
         )}
 
-      {/* Countdown Timer - Only show if there's an upcoming event */}
-      {!isSimpleMode && hasEvent && (
-        <section className="py-12 sm:py-16 bg-linear-to-r from-green-600 to-emerald-600 text-white">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto text-center">
-              <div className="flex items-center justify-center gap-2 mb-6">
-                <Clock className="w-8 h-8" />
-                <h3 className="text-2xl sm:text-3xl font-bold">
-                  Zoom Meeting Berikutnya
-                </h3>
-              </div>
-              <p className="text-lg sm:text-xl text-green-100 mb-8">
-                Bergabunglah dengan sesi informasi kami
-              </p>
-              <div className="grid grid-cols-4 gap-4 sm:gap-6 max-w-2xl mx-auto">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                    {timeLeft.days}
-                  </div>
-                  <div className="text-sm sm:text-base text-green-100">
-                    Hari
-                  </div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                    {timeLeft.hours}
-                  </div>
-                  <div className="text-sm sm:text-base text-green-100">Jam</div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                    {timeLeft.minutes}
-                  </div>
-                  <div className="text-sm sm:text-base text-green-100">
-                    Menit
-                  </div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6">
-                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2">
-                    {timeLeft.seconds}
-                  </div>
-                  <div className="text-sm sm:text-base text-green-100">
-                    Detik
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Latest Event Section */}
-      {!isSimpleMode && (
-        <section className="py-16 bg-white">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <LatestEvent />
-          </div>
-        </section>
-      )}
-
-      {/* Registration Form Section */}
-      <section className="py-16 sm:py-24 bg-linear-to-br from-blue-600 to-indigo-700">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-8 text-white">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 leading-tight">
-                Gerakan Donasi 1 Juta Kacamata Medis Gratis untuk Indonesia
-              </h2>
-              <p className="text-lg sm:text-xl text-blue-100 mb-4 leading-relaxed">
-                Dengan menjadi bagian dari SocialPreneur Movement Indonesia,
-                kamu ikut berperan langsung dalam gerakan sosial nasional yang
-                membantu sesama sekaligus membuka peluang ekonomi berkelanjutan.
-              </p>
-              <p className="text-base sm:text-lg text-blue-50 mb-8 font-medium italic">
-                Karena kebaikan bisa tumbuh jadi keberkahan — ketika sosial dan
-                bisnis berjalan seimbang.
-              </p>
-            </div>
-
-            <Suspense
-              fallback={
-                <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-                  Loading...
-                </div>
-              }
-            >
-              <RegistrationForm />
-            </Suspense>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -880,6 +886,8 @@ function HomeContent() {
           </p>
         </div>
       </footer>
+      {/* Inactivity Modal (render last so it overlays header) */}
+      {!isSimpleMode && <InactivityModal />}
     </div>
   );
 }
