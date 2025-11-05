@@ -1694,15 +1694,15 @@ function FAQSection({ showToast, showConfirm }: ToastProps) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const url = editingId
-        ? `/api/landing-page/faq?id=${editingId}`
-        : "/api/landing-page/faq";
+      const url = "/api/landing-page/faq";
       const method = editingId ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(
+          editingId ? { ...formData, id: editingId } : formData
+        ),
       });
 
       const data = await response.json();
