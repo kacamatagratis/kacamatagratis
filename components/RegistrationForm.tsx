@@ -58,6 +58,19 @@ export default function RegistrationForm() {
         // Clear inactivity modal flag since user registered
         localStorage.removeItem("inactivity_modal_dismissed");
 
+        // Trigger new joiner notification to broadcast this submission
+        const participantNotification = {
+          id: data.id || Date.now().toString(),
+          name: formData.name,
+          city: formData.city,
+          choices: formData.choices,
+          registered_at: new Date().toISOString(),
+        };
+        localStorage.setItem(
+          "trigger_new_joiner",
+          JSON.stringify(participantNotification)
+        );
+
         // Fetch general settings for WhatsApp redirect number and message template
         const settingsResponse = await fetch("/api/general-settings");
         const settingsData = await settingsResponse.json();
