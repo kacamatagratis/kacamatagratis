@@ -64,6 +64,9 @@ interface GeneralSettings {
   whatsapp_redirect_number: string;
   referral_domain: string;
   whatsapp_message_template: string;
+  // New joiner notification settings for landing page
+  notification_interval_seconds?: number;
+  notification_participant_count?: number;
 }
 
 export default function SettingsPage() {
@@ -81,6 +84,8 @@ export default function SettingsPage() {
     referral_domain: "www.kacamatagratis.org",
     whatsapp_message_template:
       "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!",
+    notification_interval_seconds: 10,
+    notification_participant_count: 10,
   });
 
   // Automation settings
@@ -111,6 +116,8 @@ export default function SettingsPage() {
         referral_domain: "www.kacamatagratis.org",
         whatsapp_message_template:
           "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!",
+        notification_interval_seconds: 10,
+        notification_participant_count: 10,
       };
 
       if (settingsDoc.exists()) {
@@ -124,6 +131,12 @@ export default function SettingsPage() {
           whatsapp_message_template:
             data.whatsapp_message_template ??
             defaultSettings.whatsapp_message_template,
+          notification_interval_seconds:
+            data.notification_interval_seconds ??
+            defaultSettings.notification_interval_seconds,
+          notification_participant_count:
+            data.notification_participant_count ??
+            defaultSettings.notification_participant_count,
         };
         setGeneralSettings(mergedSettings);
       } else {
@@ -1614,6 +1627,81 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-500 mt-2">
                   💡 Tip: Use {"{name}"} and {"{city}"} to personalize the
                   message with the participant's information.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* New Joiner Notification Settings */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <Info className="w-6 h-6 text-indigo-600 shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  New Joiner Notifications (Landing Page)
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Configure how the landing page shows new joiner notifications:
+                  interval between notifications and how many participants to
+                  show.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Interval between notifications
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={3}
+                        max={3600}
+                        value={
+                          generalSettings.notification_interval_seconds || 10
+                        }
+                        onChange={(e) =>
+                          setGeneralSettings({
+                            ...generalSettings,
+                            notification_interval_seconds:
+                              parseInt(e.target.value) || 10,
+                          })
+                        }
+                        className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <span className="text-sm text-gray-600">seconds</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Participant count to show
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={
+                          generalSettings.notification_participant_count || 10
+                        }
+                        onChange={(e) =>
+                          setGeneralSettings({
+                            ...generalSettings,
+                            notification_participant_count:
+                              parseInt(e.target.value) || 10,
+                          })
+                        }
+                        className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <span className="text-sm text-gray-600">
+                        participants
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-gray-500 mt-2">
+                  Recommended defaults: 10 participants, 10 seconds interval.
                 </p>
               </div>
             </div>

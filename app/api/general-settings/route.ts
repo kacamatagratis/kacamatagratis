@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
         referral_domain: "www.kacamatagratis.org",
         whatsapp_message_template:
           "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!",
+        // Defaults for landing page new-joiner notification
+        notification_interval_seconds: 10,
+        notification_participant_count: 10,
       });
     }
   } catch (error) {

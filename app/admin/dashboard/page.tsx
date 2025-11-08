@@ -144,8 +144,9 @@ export default function AdminDashboard() {
         aValue = new Date(a.registered_at).getTime();
         bValue = new Date(b.registered_at).getTime();
       } else if (sortField === "status") {
-        aValue = a.status === "sudah_join" ? 1 : 0;
-        bValue = b.status === "sudah_join" ? 1 : 0;
+        // Treat 'join_mgi' as the completed/joined state for sorting
+        aValue = a.status === "join_mgi" ? 1 : 0;
+        bValue = b.status === "join_mgi" ? 1 : 0;
       } else {
         aValue = String(aValue || "").toLowerCase();
         bValue = String(bValue || "").toLowerCase();
@@ -580,13 +581,17 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          participant.status === "sudah_join"
+                          participant.status === "join_mgi"
                             ? "bg-green-100 text-green-800"
+                            : participant.status === "join_zoom"
+                            ? "bg-yellow-100 text-yellow-800"
                             : "bg-blue-100 text-blue-800"
                         }`}
                       >
-                        {participant.status === "sudah_join"
-                          ? "Joined"
+                        {participant.status === "join_mgi"
+                          ? "Join MGI"
+                          : participant.status === "join_zoom"
+                          ? "Join Zoom/Presentations"
                           : "New Lead"}
                       </span>
                     </td>

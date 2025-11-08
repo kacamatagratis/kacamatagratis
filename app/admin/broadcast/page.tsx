@@ -64,6 +64,7 @@ export default function BroadcastPage() {
     new Set()
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
 
   // Form state
   const [message, setMessage] = useState("");
@@ -150,6 +151,11 @@ export default function BroadcastPage() {
           p.phone.includes(query) ||
           p.city.toLowerCase().includes(query)
       );
+    }
+
+    // Status filter
+    if (filterStatus) {
+      filtered = filtered.filter((p) => p.status === filterStatus);
     }
 
     return filtered;
@@ -411,6 +417,23 @@ export default function BroadcastPage() {
               </div>
             </div>
 
+            {/* Status Filter */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filter by Status
+              </label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Status</option>
+                <option value="new_leads">New Leads</option>
+                <option value="join_zoom">Join Zoom/Presentations</option>
+                <option value="join_mgi">Join MGI</option>
+              </select>
+            </div>
+
             {/* Select All / Deselect All Buttons */}
             <div className="flex gap-2 mb-4">
               <button
@@ -533,7 +556,9 @@ export default function BroadcastPage() {
               </div>
               <div className="bg-white rounded p-2">
                 <code className="text-blue-600 font-bold">{"{status}"}</code>
-                <p className="text-gray-600 mt-1">belum_join/sudah_join</p>
+                <p className="text-gray-600 mt-1">
+                  new_leads/join_zoom/join_mgi
+                </p>
               </div>
               <div className="bg-white rounded p-2">
                 <code className="text-blue-600 font-bold">

@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       referrer_phone: referrerPhone || null,
       referrer_sequence: referrerSequence,
       registered_at: new Date().toISOString(),
-      status: "belum_join",
+      status: "new_leads",
       unsubscribed: false,
     };
 

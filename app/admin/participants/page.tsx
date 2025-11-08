@@ -46,7 +46,7 @@ interface Participant {
   referrer_phone: string | null;
   referrer_sequence: number;
   registered_at: string;
-  status: "belum_join" | "sudah_join";
+  status: "new_leads" | "join_zoom" | "join_mgi";
   unsubscribed: boolean;
 }
 
@@ -74,6 +74,7 @@ export default function ParticipantsPage() {
     profession: "",
     phone: "",
     choices: [] as string[],
+    referrer_phone: "",
   });
 
   useEffect(() => {
@@ -185,6 +186,7 @@ export default function ParticipantsPage() {
         profession: selectedParticipant.profession,
         phone: selectedParticipant.phone,
         choices: selectedParticipant.choices || [],
+        referrer_phone: selectedParticipant.referrer_phone || "",
       });
       setIsEditing(true);
     }
@@ -202,6 +204,7 @@ export default function ParticipantsPage() {
         profession: editFormData.profession,
         phone: editFormData.phone,
         choices: editFormData.choices,
+        referrer_phone: editFormData.referrer_phone || null,
       });
 
       showToast("Participant updated successfully!", "success");
@@ -223,6 +226,7 @@ export default function ParticipantsPage() {
       profession: "",
       phone: "",
       choices: [],
+      referrer_phone: "",
     });
   };
 
@@ -372,8 +376,10 @@ export default function ParticipantsPage() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Status</option>
-              <option value="belum_join">Belum Join</option>
-              <option value="sudah_join">Sudah Join</option>
+              <option value="">All Status</option>
+              <option value="new_leads">New Leads</option>
+              <option value="join_zoom">Join Zoom/Presentations</option>
+              <option value="join_mgi">Join MGI</option>
             </select>
           </div>
         </div>
@@ -516,13 +522,17 @@ export default function ParticipantsPage() {
                       <td className="px-6 py-4">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            participant.status === "sudah_join"
+                            participant.status === "join_mgi"
                               ? "bg-green-100 text-green-800"
+                              : participant.status === "join_zoom"
+                              ? "bg-yellow-100 text-yellow-800"
                               : "bg-blue-100 text-blue-800"
                           }`}
                         >
-                          {participant.status === "sudah_join"
-                            ? "Sudah Join"
+                          {participant.status === "join_mgi"
+                            ? "Join MGI"
+                            : participant.status === "join_zoom"
+                            ? "Join Zoom/Presentations"
                             : "New Lead"}
                         </span>
                       </td>
@@ -549,6 +559,8 @@ export default function ParticipantsPage() {
                                 profession: participant.profession,
                                 phone: participant.phone,
                                 choices: participant.choices || [],
+                                referrer_phone:
+                                  participant.referrer_phone || "",
                               });
                               setIsEditing(true);
                               setShowModal(true);
@@ -721,6 +733,23 @@ export default function ParticipantsPage() {
                             phone: e.target.value,
                           })
                         }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Referrer Phone / Referral Code
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.referrer_phone}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            referrer_phone: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. 628123456789 (leave blank if none)"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
@@ -929,8 +958,9 @@ export default function ParticipantsPage() {
                       }
                       className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="belum_join">Belum Join</option>
-                      <option value="sudah_join">Sudah Join</option>
+                      <option value="new_leads">New Leads</option>
+                      <option value="join_zoom">Join Zoom/Presentations</option>
+                      <option value="join_mgi">Join MGI</option>
                     </select>
                   </div>
                 </div>

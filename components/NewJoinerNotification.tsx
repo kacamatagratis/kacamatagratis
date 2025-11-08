@@ -20,8 +20,13 @@ interface NotificationItem extends Participant {
 export default function NewJoinerNotification() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [participantPool, setParticipantPool] = useState<Participant[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [intervalSeconds, setIntervalSeconds] = useState<number>(10);
+  const [maxParticipants, setMaxParticipants] = useState<number>(10);
+  // use a ref for the current index so the interval callback doesn't capture a stale value
+  const currentIndexRef = useRef(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const shownCountRef = useRef(0);
+  const initialTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getChoiceLabel = (choices?: string[]) => {
     if (!choices || choices.length === 0) return "Peserta";
@@ -37,13 +42,14 @@ export default function NewJoinerNotification() {
   };
 
   // Fetch 10 latest participants
-  const fetchLatestParticipants = async () => {
+  const fetchLatestParticipants = async (count?: number) => {
     try {
       const participantsRef = collection(db, "participants");
+      const limitCount = count ?? maxParticipants ?? 10;
       const q = query(
         participantsRef,
         orderBy("registered_at", "desc"),
-        limit(10)
+        limit(limitCount)
       );
 
       const snapshot = await getDocs(q);
@@ -57,29 +63,64 @@ export default function NewJoinerNotification() {
         // Shuffle the participants randomly
         const shuffled = [...participants].sort(() => Math.random() - 0.5);
         setParticipantPool(shuffled);
-        setCurrentIndex(0);
+        currentIndexRef.current = 0;
+        // reset shown count when we refresh the pool
+        shownCountRef.current = 0;
       }
     } catch (error) {
       console.error("Error fetching participants:", error);
     }
   };
 
+  // Helper to add a notification while ensuring no duplicate IDs
+  const addNotification = (
+    participant: Participant | NotificationItem,
+    toTop = false
+  ) => {
+    const item: NotificationItem = {
+      ...participant,
+      isNew: (participant as NotificationItem).isNew || false,
+    };
+
+    setNotifications((prev) => {
+      // remove any existing with same id
+      const filtered = prev.filter((n) => n.id !== item.id);
+      if (toTop) {
+        return [item, ...filtered];
+      }
+      return [...filtered, item];
+    });
+  };
+
   // Show notification from the pool
   const showNextNotification = () => {
     if (participantPool.length === 0) return;
 
-    const participant = participantPool[currentIndex];
+    const idx = currentIndexRef.current % participantPool.length;
+    const participant = participantPool[idx];
 
-    // Add to notifications array
-    setNotifications((prev) => [...prev, participant]);
+    // Add to notifications array (dedupe by id)
+    addNotification(participant, false);
 
-    // Auto hide after 10 seconds
+    // Auto hide after a duration so notifications accumulate while the pool is being shown
+    const hideAfter = 10000 * Math.min(10, participantPool.length); // keep each notification visible long enough to accumulate up to max
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== participant.id));
-    }, 10000);
+    }, hideAfter);
 
-    // Move to next participant
-    setCurrentIndex((prev) => (prev + 1) % participantPool.length);
+    // Move to next participant (use ref so interval callback sees the updated value)
+    currentIndexRef.current =
+      (currentIndexRef.current + 1) % participantPool.length;
+
+    // Track how many we've shown from the current pool and stop after 10
+    shownCountRef.current += 1;
+    const maxToShow = Math.min(10, participantPool.length);
+    if (shownCountRef.current >= maxToShow) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current as any);
+        intervalRef.current = null;
+      }
+    }
   };
 
   // Check for manual triggers (new form submissions)
@@ -89,9 +130,8 @@ export default function NewJoinerNotification() {
       try {
         const participant = JSON.parse(manualTrigger) as NotificationItem;
         participant.isNew = true;
-
-        // Add to top of notifications
-        setNotifications((prev) => [participant, ...prev]);
+        // Add to top of notifications (dedupe/move to top)
+        addNotification(participant, true);
         localStorage.removeItem("trigger_new_joiner");
 
         // Auto hide after 10 seconds
@@ -108,12 +148,38 @@ export default function NewJoinerNotification() {
   };
 
   useEffect(() => {
-    // Fetch participants on mount
-    fetchLatestParticipants();
+    // Load general settings from API then fetch participants
+    let isMounted = true;
+
+    const loadSettingsAndParticipants = async () => {
+      try {
+        const res = await fetch("/api/general-settings");
+        if (!res.ok) throw new Error("Failed to load settings");
+        const data = await res.json();
+        if (!isMounted) return;
+
+        const sInterval = parseInt(data.notification_interval_seconds) || 10;
+        const sCount = parseInt(data.notification_participant_count) || 10;
+        setIntervalSeconds(sInterval);
+        setMaxParticipants(sCount);
+
+        // Fetch participants using the configured count
+        await fetchLatestParticipants(sCount);
+      } catch (err) {
+        console.error(
+          "Failed to load settings for NewJoinerNotification:",
+          err
+        );
+        // Fallback to defaults
+        await fetchLatestParticipants();
+      }
+    };
+
+    loadSettingsAndParticipants();
 
     // Refresh participant pool every 30 minutes
     const refreshInterval = setInterval(
-      fetchLatestParticipants,
+      () => fetchLatestParticipants(maxParticipants),
       30 * 60 * 1000
     );
 
@@ -121,6 +187,7 @@ export default function NewJoinerNotification() {
     const triggerInterval = setInterval(checkManualTrigger, 500);
 
     return () => {
+      isMounted = false;
       clearInterval(refreshInterval);
       clearInterval(triggerInterval);
     };
@@ -129,28 +196,45 @@ export default function NewJoinerNotification() {
   useEffect(() => {
     if (participantPool.length === 0) return;
 
-    // Clear any existing interval
+    // ensure any previous interval/timeouts are cleared
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    if (initialTimeoutRef.current) {
+      clearTimeout(initialTimeoutRef.current);
+      initialTimeoutRef.current = null;
     }
 
-    // Show first notification after 30 seconds
-    const initialTimeout = setTimeout(showNextNotification, 30000);
+    // Show first notification after 2 seconds
+    initialTimeoutRef.current = setTimeout(showNextNotification, 2000);
 
-    // Show 10 notifications spread over 60 minutes (1 hour)
-    // 60 minutes = 3600 seconds
-    // 10 notifications = show every ~360 seconds (6 minutes)
-    const interval = 6 * 60 * 1000; // 6 minutes in milliseconds
-
-    intervalRef.current = setInterval(showNextNotification, interval);
+    // Show notifications every configured interval until up to maxParticipants have been shown
+    const interval = (intervalSeconds || 10) * 1000;
+    intervalRef.current = setInterval(() => {
+      // if we've already shown enough, stop the interval
+      const maxToShow = Math.min(maxParticipants || 10, participantPool.length);
+      if (shownCountRef.current >= maxToShow) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        return;
+      }
+      showNextNotification();
+    }, interval);
 
     return () => {
-      clearTimeout(initialTimeout);
+      if (initialTimeoutRef.current) {
+        clearTimeout(initialTimeoutRef.current);
+        initialTimeoutRef.current = null;
+      }
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [participantPool, currentIndex]);
+  }, [participantPool, intervalSeconds, maxParticipants]);
 
   const handleDismiss = (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
