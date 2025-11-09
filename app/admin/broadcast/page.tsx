@@ -234,6 +234,7 @@ export default function BroadcastPage() {
     let successCount = 0;
     let failedCount = 0;
 
+    const totalToSend = selectedData.length;
     for (let i = 0; i < selectedData.length; i++) {
       const participant = selectedData[i];
 
@@ -337,13 +338,11 @@ export default function BroadcastPage() {
         );
       }
 
-      setSendProgress(
-        Math.round(((i + 1) / filteredParticipants.length) * 100)
-      );
+      setSendProgress(Math.round(((i + 1) / totalToSend) * 100));
     }
 
     setSendResults({
-      total: filteredParticipants.length,
+      total: totalToSend,
       success: successCount,
       failed: failedCount,
     });
@@ -674,7 +673,9 @@ Tim Kacamata Gratis`}
               ) : (
                 <>
                   <Send className="w-5 h-5" />
-                  <span>Send to {filteredParticipants.length} Recipients</span>
+                  <span>
+                    Send to {selectedParticipants.size > 0 ? selectedParticipants.size : filteredParticipants.length} Recipient{selectedParticipants.size > 1 || filteredParticipants.length > 1 ? "s" : ""}
+                  </span>
                 </>
               )}
             </button>
