@@ -67,6 +67,11 @@ interface GeneralSettings {
   // New joiner notification settings for landing page
   notification_interval_seconds?: number;
   notification_participant_count?: number;
+  // Inactivity modal timeout (in seconds)
+  inactivity_modal_seconds?: number;
+  // Registration form texts
+  registration_title?: string;
+  registration_intro?: string;
 }
 
 export default function SettingsPage() {
@@ -86,6 +91,10 @@ export default function SettingsPage() {
       "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!",
     notification_interval_seconds: 10,
     notification_participant_count: 10,
+    inactivity_modal_seconds: 180, // 3 minutes default
+    registration_title: "DAFTAR SEKARANG",
+    registration_intro:
+      "Isi formulir dibawah ini untuk ikut terlibat dalam gerakan dan mengikuti sosialisasi program",
   });
 
   // Automation settings
@@ -118,6 +127,10 @@ export default function SettingsPage() {
           "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!",
         notification_interval_seconds: 10,
         notification_participant_count: 10,
+        inactivity_modal_seconds: 180,
+        registration_title: "DAFTAR SEKARANG",
+        registration_intro:
+          "Isi formulir dibawah ini untuk ikut terlibat dalam gerakan dan mengikuti sosialisasi program",
       };
 
       if (settingsDoc.exists()) {
@@ -137,6 +150,13 @@ export default function SettingsPage() {
           notification_participant_count:
             data.notification_participant_count ??
             defaultSettings.notification_participant_count,
+          inactivity_modal_seconds:
+            data.inactivity_modal_seconds ??
+            defaultSettings.inactivity_modal_seconds,
+          registration_title:
+            data.registration_title ?? defaultSettings.registration_title,
+          registration_intro:
+            data.registration_intro ?? defaultSettings.registration_intro,
         };
         setGeneralSettings(mergedSettings);
       } else {
@@ -1114,6 +1134,8 @@ export default function SettingsPage() {
             </button>
           </div>
 
+          {/* Inactivity Modal Settings moved to General tab */}
+
           {/* API Keys List */}
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <table className="w-full">
@@ -1584,6 +1606,59 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Registration Texts */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <Info className="w-6 h-6 text-indigo-600 shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Registration Texts
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Customize the title and intro paragraph shown on the landing
+                  page registration form.
+                </p>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      value={generalSettings.registration_title || ""}
+                      onChange={(e) =>
+                        setGeneralSettings({
+                          ...generalSettings,
+                          registration_title: e.target.value,
+                        })
+                      }
+                      placeholder="DAFTAR SEKARANG"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Intro paragraph
+                    </label>
+                    <textarea
+                      value={generalSettings.registration_intro || ""}
+                      onChange={(e) =>
+                        setGeneralSettings({
+                          ...generalSettings,
+                          registration_intro: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* WhatsApp Message Template */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <div className="flex items-start gap-3 mb-4">
@@ -1595,7 +1670,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   Customize the pre-filled message that users will send when
                   redirected to WhatsApp. Available variables: {"{name}"},{" "}
-                  {"{city}"}
+                  {"{city}"}, {"{referrerName}"}, {"{referrerNumber}"}
                 </p>
 
                 <div className="flex flex-col gap-4">
@@ -1620,7 +1695,9 @@ export default function SettingsPage() {
                   <p className="text-xs text-blue-700">
                     {generalSettings.whatsapp_message_template
                       .replace("{name}", "John Doe")
-                      .replace("{city}", "Jakarta")}
+                      .replace("{city}", "Jakarta")
+                      .replace("{referrerName}", "Budi")
+                      .replace("{referrerNumber}", "08123456789")}
                   </p>
                 </div>
 
@@ -1702,6 +1779,45 @@ export default function SettingsPage() {
 
                 <p className="text-xs text-gray-500 mt-2">
                   Recommended defaults: 10 participants, 10 seconds interval.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Inactivity Modal Settings */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <Info className="w-6 h-6 text-yellow-600 shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Inactivity Modal Timeout
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Configure after how long (when a visitor is inactive on the
+                  landing page) the modal prompting to register will appear.
+                </p>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={30}
+                    max={3600}
+                    value={generalSettings.inactivity_modal_seconds || 180}
+                    onChange={(e) =>
+                      setGeneralSettings({
+                        ...generalSettings,
+                        inactivity_modal_seconds:
+                          parseInt(e.target.value) || 180,
+                      })
+                    }
+                    className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <span className="text-sm text-gray-600">seconds</span>
+                </div>
+
+                <p className="text-xs text-gray-500 mt-2">
+                  Default: 180 seconds (3 minutes). Set to 0 to disable the
+                  modal.
                 </p>
               </div>
             </div>

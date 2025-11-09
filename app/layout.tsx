@@ -28,7 +28,7 @@ export const metadata: Metadata = {
       "Bersama SocialPreneur Movement Indonesia, kita bantu penderita glaukoma dan anak-anak dengan mata minus berat agar bisa kembali melihat dunia dengan jelas.",
     type: "website",
     locale: "id_ID",
-    siteName: "KacamataGratis.com",
+    siteName: "KacamataGratis.org",
     images: [
       {
         url: "/icon.jpg",

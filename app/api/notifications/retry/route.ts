@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       city: metadata.city || "",
       referral_code: metadata.referral_code
         ? `${
-            process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.com"
+            process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.org"
           }?ref=${metadata.referral_code}`
         : "",
       event_title: metadata.event_title || "",

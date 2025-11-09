@@ -251,7 +251,7 @@ export default function BroadcastPage() {
         // Replace ALL variables in message
         const referralLink = participant.referral_code
           ? `${
-              process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.com"
+              process.env.NEXT_PUBLIC_APP_URL || "https://kacamatagratis.org"
             }?ref=${participant.referral_code}`
           : "";
 

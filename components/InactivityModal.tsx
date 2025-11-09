@@ -6,6 +6,7 @@ import { X, UserPlus } from "lucide-react";
 export default function InactivityModal() {
   const [isVisible, setIsVisible] = useState(false);
   const [lastActivity, setLastActivity] = useState(Date.now());
+  const [inactivitySeconds, setInactivitySeconds] = useState<number>(180);
 
   useEffect(() => {
     // Track user activity
@@ -22,10 +23,13 @@ export default function InactivityModal() {
     // Check inactivity every 10 seconds
     const interval = setInterval(() => {
       const inactiveTime = Date.now() - lastActivity;
-      const threeMinutes = 3 * 60 * 1000; // 3 minutes in milliseconds
+      const threshold = (inactivitySeconds || 180) * 1000; // configured seconds -> ms
 
-      // Check if user has been inactive for 3 minutes and hasn't dismissed the modal
-      if (inactiveTime >= threeMinutes) {
+      // If setting is 0 or negative, disable the inactivity modal
+      if ((inactivitySeconds || 0) <= 0) return;
+
+      // Check if user has been inactive for threshold and hasn't dismissed the modal
+      if (inactiveTime >= threshold) {
         const dismissed = localStorage.getItem("inactivity_modal_dismissed");
         if (!dismissed) {
           setIsVisible(true);
@@ -39,7 +43,29 @@ export default function InactivityModal() {
       });
       clearInterval(interval);
     };
-  }, [lastActivity]);
+  }, [lastActivity, inactivitySeconds]);
+
+  // Load inactivity setting from API on mount
+  useEffect(() => {
+    let mounted = true;
+    const loadSetting = async () => {
+      try {
+        const res = await fetch("/api/general-settings");
+        if (!res.ok) throw new Error("Failed to load general settings");
+        const data = await res.json();
+        if (!mounted) return;
+        const val = parseInt(data.inactivity_modal_seconds);
+        if (!isNaN(val)) setInactivitySeconds(val);
+      } catch (err) {
+        console.error("Failed to load inactivity setting:", err);
+      }
+    };
+
+    loadSetting();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleClose = () => {
     setIsVisible(false);

@@ -18,8 +18,29 @@ export default function RegistrationForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [registrationTitle, setRegistrationTitle] = useState("DAFTAR SEKARANG");
+  const [registrationIntro, setRegistrationIntro] = useState(
+    "Isi formulir dibawah ini untuk ikut terlibat dalam gerakan dan mengikuti sosialisasi program"
+  );
 
   useEffect(() => {
+    // Load dynamic registration texts from general settings
+    (async () => {
+      try {
+        const res = await fetch("/api/general-settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.registration_title)
+            setRegistrationTitle(data.registration_title);
+          if (data.registration_intro)
+            setRegistrationIntro(data.registration_intro);
+        }
+      } catch (err) {
+        // ignore and use defaults
+        console.error("Failed to load registration texts:", err);
+      }
+    })();
+
     // Extract referral code from URL
     const ref = searchParams.get("ref");
     if (ref) {
@@ -83,10 +104,50 @@ export default function RegistrationForm() {
           settingsData.whatsapp_message_template ||
           "Halo Admin, saya {name} dari {city} sudah mendaftar untuk mengikuti sosialisasi program Socialpreneur. Terima kasih!";
 
-        // Replace variables in template
-        const personalizedMessage = messageTemplate
+        // Prepare referrer substitution values (if any)
+        let referrerName = "";
+        let referrerNumber = "";
+        if (referrerPhone) {
+          try {
+            // Normalize referral code similar to server logic: remove + and ensure country code
+            const normalize = (p: string) => {
+              if (!p) return p;
+              let v = p.toString();
+              // remove non-digits and leading +
+              v = v.replace(/\D/g, "");
+              if (v.startsWith("0")) {
+                v = "62" + v.substring(1);
+              }
+              return v.replace(/^\+/, "");
+            };
+
+            const referralCode = normalize(referrerPhone);
+            if (referralCode) {
+              const resp = await fetch(
+                `/api/participants?referral_code=${encodeURIComponent(
+                  referralCode
+                )}`
+              );
+              if (resp.ok) {
+                const json = await resp.json();
+                if (json.success && json.participant) {
+                  referrerName = json.participant.name || "";
+                  // participant.phone may be stored with +, normalize to a readable format
+                  referrerNumber = (json.participant.phone || "").toString();
+                }
+              }
+            }
+          } catch (err) {
+            console.error("Failed to fetch referrer info:", err);
+          }
+        }
+
+        // Replace variables in template, include referrer placeholders
+        let personalizedMessage = messageTemplate
           .replace("{name}", formData.name)
-          .replace("{city}", formData.city);
+          .replace("{city}", formData.city)
+          .replace("{referrerName}", referrerName)
+          .replace("{referrerNumber}", referrerNumber);
 
         // Redirect to WhatsApp after 2 seconds
         setTimeout(() => {
@@ -156,9 +217,11 @@ export default function RegistrationForm() {
   return (
     <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8" id="zoom">
       <div className="text-center mb-8">
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+          {registrationTitle}
+        </h3>
         <p className="text-gray-700 text-base sm:text-lg leading-relaxed">
-          Isi formulir dibawah ini untuk ikut terlibat dalam gerakan dan
-          mengikuti sosialisasi program
+          {registrationIntro}
         </p>
       </div>
 
@@ -169,6 +232,48 @@ export default function RegistrationForm() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Pilihan (moved to top) */}
+        <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+          <label className="block text-sm font-semibold text-blue-900 mb-3">
+            Pilihan Anda (bisa pilih lebih dari 1)
+          </label>
+          <div className="space-y-3">
+            <label className="flex items-start gap-3 p-3 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.choices.includes("penerima_bantuan")}
+                onChange={() => handleChoiceChange("penerima_bantuan")}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-blue-900 text-sm">
+                Saya ingin mendaftar sebagai penerima bantuan
+              </span>
+            </label>
+            <label className="flex items-start gap-3 p-3 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.choices.includes("relawan")}
+                onChange={() => handleChoiceChange("relawan")}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-blue-900 text-sm">
+                Saya ingin mendaftar sebagai relawan
+              </span>
+            </label>
+            <label className="flex items-start gap-3 p-3 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={formData.choices.includes("social_entrepreneur")}
+                onChange={() => handleChoiceChange("social_entrepreneur")}
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-blue-900 text-sm">
+                Saya ingin mendaftar sebagai Social Entrepreneur
+              </span>
+            </label>
+          </div>
+        </div>
+
         {/* Nama */}
         <div>
           <label
@@ -272,47 +377,7 @@ export default function RegistrationForm() {
           </p>
         </div>
 
-        {/* Pilihan */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-3">
-            Pilihan Anda (bisa pilih lebih dari 1)
-          </label>
-          <div className="space-y-3">
-            <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-              <input
-                type="checkbox"
-                checked={formData.choices.includes("penerima_bantuan")}
-                onChange={() => handleChoiceChange("penerima_bantuan")}
-                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-gray-700 text-sm">
-                Saya ingin mendaftar sebagai penerima bantuan
-              </span>
-            </label>
-            <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-              <input
-                type="checkbox"
-                checked={formData.choices.includes("relawan")}
-                onChange={() => handleChoiceChange("relawan")}
-                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-gray-700 text-sm">
-                Saya ingin mendaftar sebagai relawan
-              </span>
-            </label>
-            <label className="flex items-start gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-              <input
-                type="checkbox"
-                checked={formData.choices.includes("social_entrepreneur")}
-                onChange={() => handleChoiceChange("social_entrepreneur")}
-                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-gray-700 text-sm">
-                Saya ingin mendaftar sebagai Social Entrepreneur
-              </span>
-            </label>
-          </div>
-        </div>
+        {/* (duplicate choices removed — top choices are used) */}
 
         {/* Submit Button */}
         <button

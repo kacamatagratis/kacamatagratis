@@ -21,6 +21,12 @@ export async function GET(request: NextRequest) {
         // Defaults for landing page new-joiner notification
         notification_interval_seconds: 10,
         notification_participant_count: 10,
+        // Default inactivity modal timeout (seconds)
+        inactivity_modal_seconds: 180,
+        // Registration texts
+        registration_title: "DAFTAR SEKARANG",
+        registration_intro:
+          "Isi formulir dibawah ini untuk ikut terlibat dalam gerakan dan mengikuti sosialisasi program",
       });
     }
   } catch (error) {
