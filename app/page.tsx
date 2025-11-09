@@ -343,13 +343,13 @@ function HomeContent() {
       </section>
 
       {/* Latest Event Section */}
-      {!isSimpleMode && (
+      {/* {!isSimpleMode && (
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <LatestEvent />
           </div>
         </section>
-      )}
+      )} */}
 
       {/* Countdown Timer - Only show if there's an upcoming event */}
       {!isSimpleMode && hasEvent && (
