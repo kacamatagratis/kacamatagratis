@@ -15,6 +15,7 @@ interface Participant {
 
 interface NotificationItem extends Participant {
   isNew?: boolean;
+  isExiting?: boolean;
 }
 
 export default function NewJoinerNotification() {
@@ -29,6 +30,8 @@ export default function NewJoinerNotification() {
   const initialTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Auto-dismiss the whole notification UI after configured time (3 minutes)
   const autoDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // duration for exit animation in ms
+  const EXIT_DURATION = 500;
 
   const getChoiceLabel = (choices?: string[]) => {
     if (!choices || choices.length === 0) return "Peserta";
@@ -41,6 +44,16 @@ export default function NewJoinerNotification() {
     });
 
     return labels.filter(Boolean).join(", ");
+  };
+
+  // Mark a notification as exiting (to play exit animation) and remove it after EXIT_DURATION
+  const initiateHideNotification = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isExiting: true } : n))
+    );
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    }, EXIT_DURATION);
   };
 
   // Fetch 10 latest participants
@@ -104,10 +117,10 @@ export default function NewJoinerNotification() {
     // Add to notifications array (dedupe by id)
     addNotification(participant, false);
 
-    // Auto hide after a duration so notifications accumulate while the pool is being shown
-    const hideAfter = 10000 * Math.min(10, participantPool.length); // keep each notification visible long enough to accumulate up to max
+    // Auto hide after a short duration (3 seconds)
+    const hideAfter = 3000; // 3 seconds
     setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== participant.id));
+      initiateHideNotification(participant.id);
     }, hideAfter);
 
     // Move to next participant (use ref so interval callback sees the updated value)
@@ -136,12 +149,10 @@ export default function NewJoinerNotification() {
         addNotification(participant, true);
         localStorage.removeItem("trigger_new_joiner");
 
-        // Auto hide after 10 seconds
+        // Auto hide after 3 seconds for manual triggers as well (with animation)
         setTimeout(() => {
-          setNotifications((prev) =>
-            prev.filter((n) => n.id !== participant.id)
-          );
-        }, 10000);
+          initiateHideNotification(participant.id);
+        }, 3000);
       } catch (e) {
         console.error("Error parsing manual trigger:", e);
         localStorage.removeItem("trigger_new_joiner");
@@ -214,26 +225,33 @@ export default function NewJoinerNotification() {
     if (!autoDismissRef.current) {
       // 3 minutes = 180000 ms
       autoDismissRef.current = setTimeout(() => {
-        // Clear visible notifications
-        setNotifications([]);
+        // Mark all visible notifications as exiting so they animate out
+        setNotifications((prev) =>
+          prev.map((n) => ({ ...n, isExiting: true }))
+        );
 
-        // Stop the periodic interval that shows more notifications
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current as any);
-          intervalRef.current = null;
-        }
+        // After the exit animation completes, clear state and cleanup
+        setTimeout(() => {
+          setNotifications([]);
 
-        // Clear the participant pool so no further notifications are scheduled
-        setParticipantPool([]);
+          // Stop the periodic interval that shows more notifications
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current as any);
+            intervalRef.current = null;
+          }
 
-        // Remove any manual trigger flag from localStorage
-        try {
-          localStorage.removeItem("trigger_new_joiner");
-        } catch (e) {
-          // ignore
-        }
+          // Clear the participant pool so no further notifications are scheduled
+          setParticipantPool([]);
 
-        autoDismissRef.current = null;
+          // Remove any manual trigger flag from localStorage
+          try {
+            localStorage.removeItem("trigger_new_joiner");
+          } catch (e) {
+            // ignore
+          }
+
+          autoDismissRef.current = null;
+        }, EXIT_DURATION);
       }, 180000);
     }
 
@@ -290,7 +308,7 @@ export default function NewJoinerNotification() {
   }, [participantPool, intervalSeconds, maxParticipants]);
 
   const handleDismiss = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    initiateHideNotification(id);
   };
 
   if (notifications.length === 0) return null;
@@ -301,8 +319,8 @@ export default function NewJoinerNotification() {
         <div
           key={notification.id}
           className={`transform transition-all duration-500 ${
-            index === 0
-              ? "translate-x-0 opacity-100"
+            notification.isExiting
+              ? "-translate-x-full opacity-0"
               : "translate-x-0 opacity-100"
           }`}
           style={{
