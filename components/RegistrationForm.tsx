@@ -142,12 +142,38 @@ export default function RegistrationForm() {
           }
         }
 
-        // Replace variables in template, include referrer placeholders
-        let personalizedMessage = messageTemplate
-          .replace("{name}", formData.name)
-          .replace("{city}", formData.city)
-          .replace("{referrerName}", referrerName)
-          .replace("{referrerNumber}", referrerNumber);
+        // If there was no ref parameter or we couldn't resolve a referrer,
+        // fall back to admin values from general settings.
+        if (!referrerName) {
+          referrerName = "Admin";
+        }
+        if (!referrerNumber) {
+          // Prefer the original formatted number from settings if available,
+          // otherwise use the normalized digits-only adminPhone.
+          referrerNumber = settingsData.whatsapp_redirect_number || adminPhone;
+        }
+
+        // Replace variables in template, include referrer placeholders.
+        // Use a robust replacer that handles multiple occurrences and
+        // common misspellings (e.g. reffererName) so templates authored
+        // with different spellings still work.
+        const vars: Record<string, string> = {
+          name: formData.name || "",
+          city: formData.city || "",
+          referrerName: referrerName || "",
+          referrerNumber: referrerNumber || "",
+          // common misspelling variants
+          reffererName: referrerName || "",
+          reffererNumber: referrerNumber || "",
+        };
+
+        // Safely replace all {var} occurrences
+        const personalizedMessage = messageTemplate.replace(
+          /\{(.*?)\}/g,
+          (_match: string, key: string) => {
+            return vars[key] ?? "";
+          }
+        );
 
         // Redirect to WhatsApp after 2 seconds
         setTimeout(() => {

@@ -27,6 +27,8 @@ export default function NewJoinerNotification() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const shownCountRef = useRef(0);
   const initialTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Auto-dismiss the whole notification UI after configured time (3 minutes)
+  const autoDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getChoiceLabel = (choices?: string[]) => {
     if (!choices || choices.length === 0) return "Peserta";
@@ -190,8 +192,59 @@ export default function NewJoinerNotification() {
       isMounted = false;
       clearInterval(refreshInterval);
       clearInterval(triggerInterval);
+      if (autoDismissRef.current) {
+        clearTimeout(autoDismissRef.current);
+        autoDismissRef.current = null;
+      }
     };
   }, []);
+
+  // Auto-dismiss entire notification area after 3 minutes of being visible
+  useEffect(() => {
+    // If there are no notifications, ensure any scheduled auto-dismiss is cleared
+    if (!notifications || notifications.length === 0) {
+      if (autoDismissRef.current) {
+        clearTimeout(autoDismissRef.current);
+        autoDismissRef.current = null;
+      }
+      return;
+    }
+
+    // If notifications are present and we don't already have a dismiss timer, set one
+    if (!autoDismissRef.current) {
+      // 3 minutes = 180000 ms
+      autoDismissRef.current = setTimeout(() => {
+        // Clear visible notifications
+        setNotifications([]);
+
+        // Stop the periodic interval that shows more notifications
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current as any);
+          intervalRef.current = null;
+        }
+
+        // Clear the participant pool so no further notifications are scheduled
+        setParticipantPool([]);
+
+        // Remove any manual trigger flag from localStorage
+        try {
+          localStorage.removeItem("trigger_new_joiner");
+        } catch (e) {
+          // ignore
+        }
+
+        autoDismissRef.current = null;
+      }, 180000);
+    }
+
+    // Clean up if notifications change/unmount
+    return () => {
+      if (autoDismissRef.current) {
+        clearTimeout(autoDismissRef.current);
+        autoDismissRef.current = null;
+      }
+    };
+  }, [notifications]);
 
   useEffect(() => {
     if (participantPool.length === 0) return;

@@ -674,7 +674,15 @@ Tim Kacamata Gratis`}
                 <>
                   <Send className="w-5 h-5" />
                   <span>
-                    Send to {selectedParticipants.size > 0 ? selectedParticipants.size : filteredParticipants.length} Recipient{selectedParticipants.size > 1 || filteredParticipants.length > 1 ? "s" : ""}
+                    Send to{" "}
+                    {selectedParticipants.size > 0
+                      ? selectedParticipants.size
+                      : filteredParticipants.length}{" "}
+                    Recipient
+                    {selectedParticipants.size > 1 ||
+                    filteredParticipants.length > 1
+                      ? "s"
+                      : ""}
                   </span>
                 </>
               )}
