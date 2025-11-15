@@ -218,6 +218,9 @@ export async function sendWhatsAppMessage(
     const messageWithRandom = message + generateRandomText();
 
     // Send message via DripSender
+    console.log(
+      `[WhatsApp] Sending to DripSender: api_key=${apiKey.label}, phone=${formattedPhone}`
+    );
     const response = await fetch("https://api.dripsender.id/send", {
       method: "POST",
       headers: {
@@ -229,6 +232,10 @@ export async function sendWhatsAppMessage(
         text: messageWithRandom,
       }),
     });
+    console.log(
+      `[WhatsApp] DripSender response status: ${response.status}, headers:`,
+      Object.fromEntries(response.headers.entries())
+    );
 
     let errorDetail = "";
     const isSuccess = response.ok;
@@ -237,18 +244,22 @@ export async function sendWhatsAppMessage(
       try {
         // Check content type before parsing
         const contentType = response.headers.get("content-type");
+        console.log(`[WhatsApp] Error response content-type: ${contentType}`);
         if (contentType && contentType.includes("application/json")) {
           const errorData = await response.json();
+          console.log(`[WhatsApp] Error JSON:`, errorData);
           errorDetail = `HTTP ${response.status}: ${
             errorData.message || errorData.error || JSON.stringify(errorData)
           }`;
         } else {
           const textError = await response.text();
+          console.log(`[WhatsApp] Error text:`, textError);
           errorDetail = `HTTP ${response.status}: ${
             textError || response.statusText
           }`;
         }
-      } catch {
+      } catch (parseError) {
+        console.log(`[WhatsApp] Failed to parse error response:`, parseError);
         errorDetail = `HTTP ${response.status}: ${response.statusText}`;
       }
     }

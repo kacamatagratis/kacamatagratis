@@ -55,19 +55,22 @@ export async function POST(request: NextRequest) {
       const errorMessage =
         responseData.message || responseData.error || "Unknown error";
 
-      // Common error patterns for invalid API keys
+      // Common error patterns for invalid API keys or connection issues
       const isInvalidKey =
         errorMessage.toLowerCase().includes("invalid") ||
         errorMessage.toLowerCase().includes("unauthorized") ||
         errorMessage.toLowerCase().includes("api key") ||
+        errorMessage.toLowerCase().includes("connect") ||
+        errorMessage.toLowerCase().includes("econnrefused") ||
         response.status === 401 ||
-        response.status === 403;
+        response.status === 403 ||
+        response.status === 500; // Treat 500 as failure due to connection issues
 
       if (isInvalidKey) {
         return NextResponse.json({
           success: false,
-          status: "invalid",
-          error: "Invalid or unauthorized API key",
+          status: "failed",
+          error: "API key test failed - connection or authentication error",
           label: label || "Unknown",
           details: errorMessage,
         });

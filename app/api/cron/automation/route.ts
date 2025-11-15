@@ -59,7 +59,7 @@ async function runAutomation() {
   };
 
   // First, retry any failed notifications
-  await retryFailedNotifications(results, referralDomain);
+  // await retryFailedNotifications(results, referralDomain);
 
   // Check for pending welcome messages (default: 2 minutes)
   await processPendingWelcomeMessages(
