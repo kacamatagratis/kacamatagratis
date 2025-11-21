@@ -188,13 +188,34 @@ async function processPendingWelcomeMessages(
       `[AUTOMATION] Checking welcome messages with delay: ${delayMinutes} minutes`
     );
 
-    // Query for pending welcome messages
+    // Query for pending welcome messages (only status: "pending")
     const pendingQuery = query(
       notificationsRef,
       where("type", "==", "welcome"),
       where("status", "==", "pending")
     );
     const pendingSnap = await getDocs(pendingQuery);
+
+    // Also check for stuck "processing" notifications older than 10 minutes
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+    const stuckProcessingQuery = query(
+      notificationsRef,
+      where("type", "==", "welcome"),
+      where("status", "==", "processing"),
+      where("processing_started_at", "<", tenMinutesAgo.toISOString())
+    );
+    const stuckProcessingSnap = await getDocs(stuckProcessingQuery);
+
+    // Reset stuck processing notifications back to pending
+    for (const stuckDoc of stuckProcessingSnap.docs) {
+      await updateDoc(doc(db, "notifications_log", stuckDoc.id), {
+        status: "pending",
+        processing_started_at: null,
+      });
+      console.log(
+        `[AUTOMATION] Reset stuck processing notification ${stuckDoc.id} back to pending`
+      );
+    }
 
     console.log(
       `[AUTOMATION] Found ${pendingSnap.size} pending welcome messages`
@@ -232,6 +253,22 @@ async function processPendingWelcomeMessages(
           )}min < ${delayMinutes}min`
         );
         continue;
+      }
+
+      // Mark notification as processing to prevent duplicate processing by concurrent cron runs
+      try {
+        await updateDoc(doc(db, "notifications_log", pendingDoc.id), {
+          status: "processing",
+          processing_started_at: new Date().toISOString(),
+        });
+        console.log(
+          `[AUTOMATION] Marked notification ${pendingDoc.id} as processing`
+        );
+      } catch (updateError) {
+        console.log(
+          `[AUTOMATION] Failed to mark notification as processing, skipping: ${updateError}`
+        );
+        continue; // Skip this notification if we can't lock it
       }
 
       const participantCity = metadata.city || "";
@@ -293,6 +330,7 @@ async function processPendingReferrerAlerts(
 ) {
   try {
     const notificationsRef = collection(db, "notifications_log");
+    const now = new Date();
 
     console.log(
       `[AUTOMATION] Checking referrer alerts (instant send, no delay)`
@@ -305,6 +343,27 @@ async function processPendingReferrerAlerts(
       where("status", "==", "pending")
     );
     const pendingSnap = await getDocs(pendingQuery);
+
+    // Also check for stuck "processing" referrer alerts older than 10 minutes
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+    const stuckProcessingQuery = query(
+      notificationsRef,
+      where("type", "==", "referrer_alert"),
+      where("status", "==", "processing"),
+      where("processing_started_at", "<", tenMinutesAgo.toISOString())
+    );
+    const stuckProcessingSnap = await getDocs(stuckProcessingQuery);
+
+    // Reset stuck processing notifications back to pending
+    for (const stuckDoc of stuckProcessingSnap.docs) {
+      await updateDoc(doc(db, "notifications_log", stuckDoc.id), {
+        status: "pending",
+        processing_started_at: null,
+      });
+      console.log(
+        `[AUTOMATION] Reset stuck processing referrer alert ${stuckDoc.id} back to pending`
+      );
+    }
 
     console.log(
       `[AUTOMATION] Found ${pendingSnap.size} pending referrer alerts (instant send, no delay)`
@@ -323,6 +382,22 @@ async function processPendingReferrerAlerts(
       const metadata = notification.metadata || {};
       const newParticipantName = metadata.new_participant_name || "Unknown";
       const referrerSequence = metadata.referrer_sequence || 1;
+
+      // Mark notification as processing to prevent duplicate processing by concurrent cron runs
+      try {
+        await updateDoc(doc(db, "notifications_log", pendingDoc.id), {
+          status: "processing",
+          processing_started_at: new Date().toISOString(),
+        });
+        console.log(
+          `[AUTOMATION] Marked referrer alert ${pendingDoc.id} as processing`
+        );
+      } catch (updateError) {
+        console.log(
+          `[AUTOMATION] Failed to mark referrer alert as processing, skipping: ${updateError}`
+        );
+        continue; // Skip this notification if we can't lock it
+      }
 
       console.log(
         `[AUTOMATION] Processing referrer alert for phone: ${targetPhone}`

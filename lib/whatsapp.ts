@@ -26,6 +26,10 @@ interface MessageTemplate {
   variables: string[];
 }
 
+// Global deduplication map to prevent multiple sends within 5 minutes
+const recentSends = new Map<string, number>();
+const DEDUPLICATION_WINDOW = 5 * 60 * 1000; // 5 minutes
+
 /**
  * Get a random active API key from Firebase
  */
@@ -193,6 +197,35 @@ export async function sendWhatsAppMessage(
     const formattedPhone = formatPhoneForDripSender(phone);
     console.log(`[WhatsApp] Formatting phone: ${phone} -> ${formattedPhone}`);
 
+    // Check for duplicate sends within deduplication window
+    const dedupeKey = `${formattedPhone}-${messageType}`;
+    const now = Date.now();
+    const lastSend = recentSends.get(dedupeKey);
+
+    if (lastSend && now - lastSend < DEDUPLICATION_WINDOW) {
+      console.log(
+        `[WhatsApp] Duplicate send prevented for ${dedupeKey} (${
+          DEDUPLICATION_WINDOW / 1000
+        }s window)`
+      );
+      return {
+        success: false,
+        error: `Duplicate send prevented within ${
+          DEDUPLICATION_WINDOW / 1000
+        } seconds`,
+      };
+    }
+
+    // Update deduplication timestamp
+    recentSends.set(dedupeKey, now);
+
+    // Clean up old entries from deduplication map (keep it from growing indefinitely)
+    for (const [key, timestamp] of recentSends.entries()) {
+      if (now - timestamp > DEDUPLICATION_WINDOW) {
+        recentSends.delete(key);
+      }
+    }
+
     // Get random active API key
     const apiKey = await getRandomApiKey();
     if (!apiKey) {
@@ -290,46 +323,8 @@ export async function sendWhatsAppMessage(
         apiKeyUsed: apiKey.label,
       };
     } else {
-      // Try with another API key if first one fails
-      const retryKey = await getRandomApiKey();
-      if (retryKey && retryKey.id !== apiKey.id) {
-        // Generate new random text for retry
-        const retryMessageWithRandom = message + generateRandomText();
-
-        const retryResponse = await fetch("https://api.dripsender.id/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            api_key: retryKey.api_key,
-            phone: formattedPhone,
-            text: retryMessageWithRandom,
-          }),
-        });
-
-        if (retryResponse.ok) {
-          await updateKeyUsage(retryKey.id);
-          if (participantId) {
-            await logNotification(
-              participantId,
-              phone,
-              messageType,
-              retryKey.label,
-              "success",
-              message,
-              undefined,
-              eventId,
-              variables // Pass variables as metadata
-            );
-          }
-          return {
-            success: true,
-            apiKeyUsed: retryKey.label,
-          };
-        }
-      }
-
+      // RETRY LOGIC DISABLED - No longer retry with another API key to prevent duplicate sends
+      // This was causing multiple messages to be sent to the same recipient
       return {
         success: false,
         error: `Failed to send message: ${errorDetail}`,
