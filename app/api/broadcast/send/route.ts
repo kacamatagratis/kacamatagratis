@@ -4,6 +4,10 @@ import { collection, addDoc } from "firebase/firestore";
 
 export const dynamic = "force-dynamic";
 
+// Global deduplication map to prevent multiple sends within 5 minutes
+const recentBroadcasts = new Map<string, number>();
+const DEDUPLICATION_WINDOW = 5 * 60 * 1000; // 5 minutes
+
 // Helper function to format phone for DripSender
 function formatPhoneForDripSender(phone: string): string {
   let formatted = phone.replace(/[\s\-+]/g, "");
@@ -83,6 +87,38 @@ export async function POST(request: NextRequest) {
     // Format phone number
     const formattedPhone = formatPhoneForDripSender(phone);
     console.log(`[Broadcast] Formatting phone: ${phone} -> ${formattedPhone}`);
+
+    // Check for duplicate sends within deduplication window
+    const dedupeKey = `broadcast-${formattedPhone}`;
+    const now = Date.now();
+    const lastSend = recentBroadcasts.get(dedupeKey);
+
+    if (lastSend && now - lastSend < DEDUPLICATION_WINDOW) {
+      console.log(
+        `[Broadcast] Duplicate send prevented for ${dedupeKey} (${
+          DEDUPLICATION_WINDOW / 1000
+        }s window)`
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Duplicate send prevented within ${
+            DEDUPLICATION_WINDOW / 1000
+          } seconds`,
+        },
+        { status: 429 }
+      );
+    }
+
+    // Update deduplication timestamp
+    recentBroadcasts.set(dedupeKey, now);
+
+    // Clean up old entries from deduplication map (keep it from growing indefinitely)
+    for (const [key, timestamp] of recentBroadcasts.entries()) {
+      if (now - timestamp > DEDUPLICATION_WINDOW) {
+        recentBroadcasts.delete(key);
+      }
+    }
 
     // Get random active API key
     const apiKey = await getRandomApiKey();

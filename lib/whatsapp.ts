@@ -360,6 +360,35 @@ export async function sendWhatsAppMessageWithMedia(
       `[WhatsApp Media] Formatting phone: ${phone} -> ${formattedPhone}`
     );
 
+    // Check for duplicate sends within deduplication window
+    const dedupeKey = `${formattedPhone}-${messageType}`;
+    const now = Date.now();
+    const lastSend = recentSends.get(dedupeKey);
+
+    if (lastSend && now - lastSend < DEDUPLICATION_WINDOW) {
+      console.log(
+        `[WhatsApp Media] Duplicate send prevented for ${dedupeKey} (${
+          DEDUPLICATION_WINDOW / 1000
+        }s window)`
+      );
+      return {
+        success: false,
+        error: `Duplicate send prevented within ${
+          DEDUPLICATION_WINDOW / 1000
+        } seconds`,
+      };
+    }
+
+    // Update deduplication timestamp
+    recentSends.set(dedupeKey, now);
+
+    // Clean up old entries from deduplication map (keep it from growing indefinitely)
+    for (const [key, timestamp] of recentSends.entries()) {
+      if (now - timestamp > DEDUPLICATION_WINDOW) {
+        recentSends.delete(key);
+      }
+    }
+
     const apiKey = await getRandomApiKey();
     if (!apiKey) {
       return {
