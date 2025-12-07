@@ -75,6 +75,7 @@ export default function ParticipantsPage() {
     phone: "",
     choices: [] as string[],
     referrer_phone: "",
+    referral_code: "",
   });
 
   useEffect(() => {
@@ -187,6 +188,7 @@ export default function ParticipantsPage() {
         phone: selectedParticipant.phone,
         choices: selectedParticipant.choices || [],
         referrer_phone: selectedParticipant.referrer_phone || "",
+        referral_code: selectedParticipant.referral_code || "",
       });
       setIsEditing(true);
     }
@@ -205,6 +207,7 @@ export default function ParticipantsPage() {
         phone: editFormData.phone,
         choices: editFormData.choices,
         referrer_phone: editFormData.referrer_phone || null,
+        referral_code: editFormData.referral_code,
       });
 
       showToast("Participant updated successfully!", "success");
@@ -227,6 +230,7 @@ export default function ParticipantsPage() {
       phone: "",
       choices: [],
       referrer_phone: "",
+      referral_code: "",
     });
   };
 
@@ -561,6 +565,7 @@ export default function ParticipantsPage() {
                                 choices: participant.choices || [],
                                 referrer_phone:
                                   participant.referrer_phone || "",
+                                referral_code: participant.referral_code || "",
                               });
                               setIsEditing(true);
                               setShowModal(true);
@@ -733,6 +738,23 @@ export default function ParticipantsPage() {
                             phone: e.target.value,
                           })
                         }
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Referral Code
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.referral_code}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            referral_code: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. 628123456789"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
